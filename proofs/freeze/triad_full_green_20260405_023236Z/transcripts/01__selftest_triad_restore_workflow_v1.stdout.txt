@@ -1,0 +1,34 @@
+OK: TRIAD CAPTURE TREE v1
+snapshot_dir:     C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\snapshot_v1
+snapshot_id:      0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+manifest_sha256:  b3d8ac561d07a4647a1321bae9c1295284b5da1163edfd1f00418ee8f98562e0
+semantic_root:    ef819a66ac10db8ddd88a37dc7a31a3fb1d230dcc7123df19e42fce3bae2025f
+block_root:       567da45300ee5f0f411da56d315f3850a92b29d5b50236ad12b09c60ace88765
+files/dirs/bytes: 1/2/3670016
+OK: TRIAD RESTORE TREE PREPARE v1
+plan:    C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\restored.bin.triad_plan_tree_v1_20260405_023243_52b838ae75274655abcc686119cd207a.json
+tmp_dir: C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\restored.bin.triad_tmp_tree_v1_20260405_023243_f75d79bea9e44768845ebbbd9b24f696
+WARN: MANIFEST_NO_BLOCKS (fallback: normalize manifest.blocks to empty; plan blocks will drive restore)
+WARN: SOURCE_BYTES_NOT_PRESENT_AT_PREPARE (skipping sha256 verify; expected_sha=; outDir=C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861)
+WARN: EXPECTED_ROOT_MISSING_IN_MANIFEST_PLAN_AND_LOCALS (skipping expectedRoot verify at PREPARE; verify/commit must enforce later)
+OK: TRIAD RESTORE PREPARE v1
+plan:       C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\restored.bin.triad_plan_v1_20260405_023243_887f84315aac46b7a38a8e2606a6eacf.json
+tmp:        C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\restored.bin.triad_tmp_v1_20260405_023243_887f84315aac46b7a38a8e2606a6eacf
+tmp_len:    0
+expected:   len=3670016 sha256=
+OK: TRIAD RESTORE VERIFY v1
+plan:     C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\restored.bin.triad_plan_v1_20260405_023243_887f84315aac46b7a38a8e2606a6eacf.json
+tmp_sha:  a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+tmp_len:  3670016
+root_ok:  9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f
+OK: TRIAD RESTORE COMMIT v1
+out_file: C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\restored.bin
+
+========================================
+TRIAD RESTORE WORKFLOW SELFTEST: PASS
+snapshot_id: 0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+sha256:       a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+plan:         C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861\restored.bin.triad_plan_v1_20260405_023243_887f84315aac46b7a38a8e2606a6eacf.json
+work_dir:     C:\dev\triad\scripts\_work\restorewf_20260405_023236_8eda4cf5ba014b7eac763f2529781861
+========================================
+

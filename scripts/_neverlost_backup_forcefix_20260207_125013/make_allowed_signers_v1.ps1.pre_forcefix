@@ -1,0 +1,29 @@
+param([Parameter(Mandatory=$true)][string]$RepoRoot)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+# Resolve lib path relative to this script (PS 5.1-safe)
+$thisDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$libPath = Join-Path $thisDir "_lib_neverlost_v1.ps1"
+if(-not (Test-Path -LiteralPath $libPath)){ throw ("LIB_MISSING: " + $libPath) }
+
+. $libPath
+
+# Prove functions loaded (fail fast if dot-source didn't work)
+if(-not (Get-Command NL-WriteAllowedSigners -ErrorAction SilentlyContinue)){
+  throw ("LIB_DOTSOURCE_FAILED: NL-WriteAllowedSigners not found after dot-source :: " + $libPath)
+}
+if(-not (Get-Command NL-TrustBundlePath -ErrorAction SilentlyContinue)){
+  throw ("LIB_DOTSOURCE_FAILED: NL-TrustBundlePath not found after dot-source :: " + $libPath)
+}
+
+$out    = NL-WriteAllowedSigners $RepoRoot
+$tbPath = NL-TrustBundlePath $RepoRoot
+$asPath = NL-AllowedSignersPath $RepoRoot
+
+Write-Host "OK: allowed_signers written deterministically" -ForegroundColor Green
+Write-Host ("trust_bundle:    {0}" -f $tbPath) -ForegroundColor Cyan
+Write-Host ("allowed_signers: {0}" -f $asPath) -ForegroundColor Cyan
+Write-Host ("trust_bundle_sha256:    {0}" -f (NL-Sha256HexFile $tbPath)) -ForegroundColor DarkGray
+Write-Host ("allowed_signers_sha256: {0}" -f (NL-Sha256HexFile $asPath)) -ForegroundColor DarkGray

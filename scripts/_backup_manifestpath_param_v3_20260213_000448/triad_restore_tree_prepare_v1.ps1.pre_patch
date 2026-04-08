@@ -1,0 +1,112 @@
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$SnapshotDir,
+  [Parameter(Mandatory=$true)][string]$OutDir
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+function Die([string]$m){ throw $m }
+
+function Utf8NoBom { New-Object System.Text.UTF8Encoding($false) }
+function WriteUtf8NoBomLf([string]$Path,[string]$Content){
+  $parent = Split-Path -Parent $Path
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  $lf = $Content.Replace("`r`n","`n").Replace("`r","`n")
+  if(-not $lf.EndsWith("`n")){ $lf += "`n" }
+  [IO.File]::WriteAllText($Path,$lf,(Utf8NoBom))
+}
+
+function ReadJson([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  $raw = (Get-Content -Raw -LiteralPath $Path -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $raw | ConvertFrom-Json } catch { Die ("JSON_PARSE_FAIL: " + $Path + " :: " + $_.Exception.Message) }
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+
+$manifestPath = Join-Path $SnapshotDir "snapshot.tree.manifest.json"
+if(-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $manifestPath) }
+
+$man = ReadJson $manifestPath
+if([string]$man.schema -ne "triad.snapshot_tree.v1"){ Die ("MANIFEST_SCHEMA_UNEXPECTED: " + [string]$man.schema) }
+
+# temp restore dir next to OutDir (same parent) for atomic-ish swap
+$parent = Split-Path -Parent $OutDir
+if($parent -and -not (Test-Path -LiteralPath $parent -PathType Container)){
+  New-Item -ItemType Directory -Force -Path $parent | Out-Null
+}
+$tmp = ($OutDir + ".triad_tmp_tree_v1_" + (Get-Date).ToUniversalTime().ToString("yyyyMMdd_HHmmss") + "_" + ([Guid]::NewGuid().ToString("N")))
+New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+
+$entries = @(@($man.entries))
+if($entries.Count -lt 1){ Die "MANIFEST_NO_ENTRIES" }
+
+# create dirs first
+foreach($e in $entries){
+  if([string]$e.type -eq "dir"){
+    $rel = [string]$e.path
+    if([string]::IsNullOrWhiteSpace($rel)){ Die "DIR_PATH_EMPTY" }
+    $dst = Join-Path $tmp ($rel -replace "/","\")
+    New-Item -ItemType Directory -Force -Path $dst | Out-Null
+  }
+}
+
+# restore files
+foreach($e in $entries){
+  if([string]$e.type -eq "file"){
+    $rel = [string]$e.path
+    if([string]::IsNullOrWhiteSpace($rel)){ Die "FILE_PATH_EMPTY" }
+    $dst = Join-Path $tmp ($rel -replace "/","\")
+    $dstParent = Split-Path -Parent $dst
+    if($dstParent -and -not (Test-Path -LiteralPath $dstParent -PathType Container)){
+      New-Item -ItemType Directory -Force -Path $dstParent | Out-Null
+    }
+
+    $blocks = @(@($e.blocks))
+    if($blocks.Count -lt 1){ Die ("FILE_NO_BLOCKS: " + $rel) }
+
+    $ofs = [System.IO.File]::Open($dst,[System.IO.FileMode]::Create,[System.IO.FileAccess]::Write,[System.IO.FileShare]::None)
+    try {
+      foreach($b in $blocks){
+        $sha = [string]$b.sha256
+        $relp= [string]$b.path
+        if([string]::IsNullOrWhiteSpace($sha)){ Die "BLOCK_SHA_EMPTY" }
+        if([string]::IsNullOrWhiteSpace($relp)){ Die ("BLOCK_PATH_EMPTY: " + $sha) }
+        $blkPath = Join-Path $SnapshotDir ($relp -replace "/","\")
+        if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+        $bytes = [IO.File]::ReadAllBytes($blkPath)
+        $ofs.Write($bytes,0,$bytes.Length)
+      }
+    } finally { $ofs.Dispose() }
+  }
+}
+
+# plan file
+$plan = ($OutDir + ".triad_plan_tree_v1_" + (Get-Date).ToUniversalTime().ToString("yyyyMMdd_HHmmss") + "_" + ([Guid]::NewGuid().ToString("N")) + ".json")
+$po = [ordered]@{
+  schema        = "triad.restore_tree_plan.v1"
+  snapshot_dir  = $SnapshotDir
+  manifest_path = $manifestPath
+  out_dir       = $OutDir
+  tmp_dir       = $tmp
+  expected = [ordered]@{
+    semantic_root = [string]$man.roots.semantic_root
+    block_root    = [string]$man.roots.block_root
+    files         = [int]$man.source.files
+    dirs          = [int]$man.source.dirs
+    total_bytes   = [int64]$man.source.total_bytes
+  }
+}
+$json = ($po | ConvertTo-Json -Depth 6)
+WriteUtf8NoBomLf $plan $json
+
+Write-Host "OK: TRIAD RESTORE TREE PREPARE v1" -ForegroundColor Green
+Write-Host ("plan:    {0}" -f $plan) -ForegroundColor Cyan
+Write-Host ("tmp_dir: {0}" -f $tmp)  -ForegroundColor Cyan
+
+$plan

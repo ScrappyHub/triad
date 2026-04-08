@@ -1,0 +1,51 @@
+{
+    "schema":  "triad.snapshot.v1",
+    "snapshot_id":  "c9ccadbc0ff8f7ea87d47dbafddbaec239c3db1c22c70e92a3623d53a5a07d1b",
+    "created_utc":  "2026-02-08T20:45:54.3720238Z",
+    "identity":  {
+                     "principal":  "single-tenant/local/authority/devbox-1",
+                     "key_id":  "dev-ed25519-1",
+                     "pubkey":  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment"
+                 },
+    "source":  {
+                   "input_file_name":  "payload.bin",
+                   "length":  3670016,
+                   "sha256":  "a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536"
+               },
+    "chunking":  {
+                     "block_size":  1048576
+                 },
+    "roots":  {
+                  "block_root":  "9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f"
+              },
+    "blocks":  [
+                   {
+                       "index":  0,
+                       "offset":  0,
+                       "size":  1048576,
+                       "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                       "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                   },
+                   {
+                       "index":  1,
+                       "offset":  1048576,
+                       "size":  1048576,
+                       "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                       "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                   },
+                   {
+                       "index":  2,
+                       "offset":  2097152,
+                       "size":  1048576,
+                       "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                       "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                   },
+                   {
+                       "index":  3,
+                       "offset":  3145728,
+                       "size":  524288,
+                       "sha256":  "f28db4dcb00db2447b33538538601081ec1fc575b23e667bfb33ebe740c8df5a",
+                       "path":  "blocks/f28db4dcb00db2447b33538538601081ec1fc575b23e667bfb33ebe740c8df5a.blk"
+                   }
+               ]
+}

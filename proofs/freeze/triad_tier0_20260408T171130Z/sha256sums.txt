@@ -1,0 +1,1 @@
+cd7dc739d2ca4f350cb93f2fe64d36acd4ca17177c23698129704e127fb515e0  full_green_transcript.txt

@@ -1,0 +1,14 @@
+{
+    "schema":  "triad.restore_tree_plan.v1",
+    "snapshot_dir":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260215_004659_61c5400ef51e4076a0b42285747fe88c\\snapshot_v1",
+    "manifest_path":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260215_004659_61c5400ef51e4076a0b42285747fe88c\\snapshot_v1\\snapshot.tree.manifest.json",
+    "out_dir":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260215_004659_61c5400ef51e4076a0b42285747fe88c\\restored.bin",
+    "tmp_dir":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260215_004659_61c5400ef51e4076a0b42285747fe88c\\restored.bin.triad_tmp_tree_v1_20260215_004704_745f8e6feb9c449aa71bcdaea5cc08f7",
+    "expected":  {
+                     "semantic_root":  "ef819a66ac10db8ddd88a37dc7a31a3fb1d230dcc7123df19e42fce3bae2025f",
+                     "block_root":  "567da45300ee5f0f411da56d315f3850a92b29d5b50236ad12b09c60ace88765",
+                     "files":  1,
+                     "dirs":  2,
+                     "total_bytes":  3670016
+                 }
+}

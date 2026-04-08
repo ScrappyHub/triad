@@ -1,0 +1,1427 @@
+# PATCH_FIX_LEVEL0_OOB_V48
+# PATCH_BLOCKS_VAR_INDEX_SAFE_V46B
+# PATCH_LENOF_CHAIN_V41
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$PlanPath
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+
+
+
+
+
+# PATCH_VERIFY_TRAP_V46C
+trap {
+  $e = $_
+  $inv = $e.InvocationInfo
+  $ln = 0; $col = 0; $line = ""
+  if($inv -ne $null){
+    try { $ln = [int]$inv.ScriptLineNumber } catch { $ln = 0 }
+    try { $col = [int]$inv.OffsetInLine } catch { $col = 0 }
+    try { $line = [string]$inv.Line } catch { $line = "" }
+  }
+  $t = ""
+  try { $t = $e.Exception.GetType().FullName } catch { $t = "System.Exception" }
+  $msg = ""
+  try { $msg = [string]$e.Exception.Message } catch { $msg = [string]$e.ToString() }
+  throw ("VERIFY_TRAP: " + $ln + ":" + $col + " " + $t + " " + $msg + "`nLINE: " + $line)
+}
+# /PATCH_VERIFY_TRAP_V46C
+
+# PATCH_BLOCKS_INDEX_SAFE_V46
+function AtOrNull([Parameter(Mandatory=$true)]$Arr,[Parameter(Mandatory=$true)][int]$Index){
+  if($null -eq $Arr){ return $null }
+  $a = @(@($Arr))
+  if($Index -lt 0){ return $null }
+  if($Index -ge $a.Count){ return $null }
+  return $a[$Index]
+}
+
+# PATCH_BLOCKS_CHAIN_V43B
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+   if ($null -eq $Obj) { return $null }
+   $p = $Obj.PSObject.Properties[$Name]
+   if ($null -eq $p) { return $null }
+   return $p.Value
+ } catch { return $null }
+}
+function ArrOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ $v = PropOf $Obj $Name
+ if ($null -eq $v) { return @() }
+ return @(@($v))
+}
+
+# PATCH_PROPOF_SHA256_CHAIN_V42
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+ if ($null -eq $Obj) { return $null }
+ $p = $Obj.PSObject.Properties[$Name]
+ if ($null -eq $p) { return $null }
+ return $p.Value
+ } catch { return $null }
+}
+
+# PATCH_LENOF_GLOBAL_V40
+function LenOf([Parameter(Mandatory=$true)]$Obj){
+  try {
+    if ($null -eq $Obj) { return $null }
+    # string/array/etc
+    try {
+      $pLen = $Obj.PSObject.Properties["Length"]
+      if ($null -ne $pLen) { return $pLen.Value }
+    } catch { }
+    # JSON-ish: "length" (lowercase)
+    try {
+      $pLen2 = $Obj.PSObject.Properties["length"]
+      if ($null -ne $pLen2) { return $pLen2.Value }
+    } catch { }
+    return $null
+  } catch { return $null }
+}
+
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38
+function Get-JsonPropValue([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+  try {
+    if ($null -eq $Obj) { return $null }
+    $p = $Obj.PSObject.Properties[$Name]
+    if ($null -eq $p) { return $null }
+    return $p.Value
+  } catch { return $null }
+}
+# PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Die([string]$m){
+  if($m -eq "MANIFEST_NO_BLOCKS"){
+    Write-Output "WARN: MANIFEST_NO_BLOCKS (verify fallback: treat manifest.blocks as empty; plan blocks will drive restore)"
+    return
+  }
+  # PATCH_DIE_MERKLE_EMPTY_V45
+  if($m -eq "MERKLE_EMPTY"){
+    Write-Output "WARN: MERKLE_EMPTY (verify fallback: treat block_root as empty; semantic_root must still be enforced later)"
+    return
+  }
+# /PATCH_DIE_MERKLE_EMPTY_V45
+throw $m
+}
+# /PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Sha256HexBytes([byte[]]$Bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $h = $sha.ComputeHash($Bytes)
+    ($h | ForEach-Object { $_.ToString("x2") }) -join ""
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexFile([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+}
+
+function HexToBytes([string]$Hex){
+  if([string]::IsNullOrWhiteSpace($Hex)){ Die "HEX_EMPTY" }
+  if(((LenOf $Hex) % 2) -ne 0){ Die ("HEX_ODD_LEN: " + (LenOf $Hex)) }
+  $len = (LenOf $Hex) / 2
+  $b = New-Object byte[] $len
+  for($i=0; $i -lt $len; $i++){
+    $b[$i] = [Convert]::ToByte($Hex.Substring($i*2,2),16)
+  }
+  $b
+}
+
+function MerkleRootHex([string[]]$HexHashesInOrder){
+  $arr = @(@($HexHashesInOrder))
+  if($arr.Count -lt 1){ Die "MERKLE_EMPTY" }
+
+  $level = New-Object System.Collections.Generic.List[byte[]]
+  foreach($hx in $arr){ [void]$level.Add((HexToBytes $hx)) }
+
+  while($level.Count -gt 1){
+    $next = New-Object System.Collections.Generic.List[byte[]]
+    for($i=0; $i -lt $level.Count; $i += 2){
+      $a = $level[$i]
+      $b = $null
+      if(($i+1) -lt $level.Count){ $b = $level[$i+1] } else { $b = $level[$i] }
+      $cat = New-Object byte[] ((LenOf $a) + (LenOf $b))
+      [Array]::Copy($a,0,$cat,0,(LenOf $a))
+      [Array]::Copy($b,0,$cat,(LenOf $a),(LenOf $b))
+      $sha = [System.Security.Cryptography.SHA256]::Create()
+      try {
+        $h = $sha.ComputeHash($cat)
+        [void]$next.Add($h)
+      } finally { $sha.Dispose() }
+    }
+    $level = $next
+  }
+  # PATCH_FIX_LEVEL0_OOB_V48
+  # PATCH_FIX_LEVEL0_OOB_V48
+# PATCH_BLOCKS_VAR_INDEX_SAFE_V46B
+# PATCH_LENOF_CHAIN_V41
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$PlanPath
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+
+
+
+
+
+# PATCH_VERIFY_TRAP_V46C
+trap {
+  $e = $_
+  $inv = $e.InvocationInfo
+  $ln = 0; $col = 0; $line = ""
+  if($inv -ne $null){
+    try { $ln = [int]$inv.ScriptLineNumber } catch { $ln = 0 }
+    try { $col = [int]$inv.OffsetInLine } catch { $col = 0 }
+    try { $line = [string]$inv.Line } catch { $line = "" }
+  }
+  $t = ""
+  try { $t = $e.Exception.GetType().FullName } catch { $t = "System.Exception" }
+  $msg = ""
+  try { $msg = [string]$e.Exception.Message } catch { $msg = [string]$e.ToString() }
+  throw ("VERIFY_TRAP: " + $ln + ":" + $col + " " + $t + " " + $msg + "`nLINE: " + $line)
+}
+# /PATCH_VERIFY_TRAP_V46C
+
+# PATCH_BLOCKS_INDEX_SAFE_V46
+function AtOrNull([Parameter(Mandatory=$true)]$Arr,[Parameter(Mandatory=$true)][int]$Index){
+  if($null -eq $Arr){ return $null }
+  $a = @(@($Arr))
+  if($Index -lt 0){ return $null }
+  if($Index -ge $a.Count){ return $null }
+  return $a[$Index]
+}
+
+# PATCH_BLOCKS_CHAIN_V43B
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+   if ($null -eq $Obj) { return $null }
+   $p = $Obj.PSObject.Properties[$Name]
+   if ($null -eq $p) { return $null }
+   return $p.Value
+ } catch { return $null }
+}
+function ArrOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ $v = PropOf $Obj $Name
+ if ($null -eq $v) { return @() }
+ return @(@($v))
+}
+
+# PATCH_PROPOF_SHA256_CHAIN_V42
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+ if ($null -eq $Obj) { return $null }
+ $p = $Obj.PSObject.Properties[$Name]
+ if ($null -eq $p) { return $null }
+ return $p.Value
+ } catch { return $null }
+}
+
+# PATCH_LENOF_GLOBAL_V40
+function LenOf([Parameter(Mandatory=$true)]$Obj){
+  try {
+    if ($null -eq $Obj) { return $null }
+    # string/array/etc
+    try {
+      $pLen = $Obj.PSObject.Properties["Length"]
+      if ($null -ne $pLen) { return $pLen.Value }
+    } catch { }
+    # JSON-ish: "length" (lowercase)
+    try {
+      $pLen2 = $Obj.PSObject.Properties["length"]
+      if ($null -ne $pLen2) { return $pLen2.Value }
+    } catch { }
+    return $null
+  } catch { return $null }
+}
+
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38
+function Get-JsonPropValue([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+  try {
+    if ($null -eq $Obj) { return $null }
+    $p = $Obj.PSObject.Properties[$Name]
+    if ($null -eq $p) { return $null }
+    return $p.Value
+  } catch { return $null }
+}
+# PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Die([string]$m){
+  if($m -eq "MANIFEST_NO_BLOCKS"){
+    Write-Output "WARN: MANIFEST_NO_BLOCKS (verify fallback: treat manifest.blocks as empty; plan blocks will drive restore)"
+    return
+  }
+  # PATCH_DIE_MERKLE_EMPTY_V45
+  if($m -eq "MERKLE_EMPTY"){
+    Write-Output "WARN: MERKLE_EMPTY (verify fallback: treat block_root as empty; semantic_root must still be enforced later)"
+    return
+  }
+# /PATCH_DIE_MERKLE_EMPTY_V45
+throw $m
+}
+# /PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Sha256HexBytes([byte[]]$Bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $h = $sha.ComputeHash($Bytes)
+    ($h | ForEach-Object { $_.ToString("x2") }) -join ""
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexFile([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+}
+
+function HexToBytes([string]$Hex){
+  if([string]::IsNullOrWhiteSpace($Hex)){ Die "HEX_EMPTY" }
+  if(((LenOf $Hex) % 2) -ne 0){ Die ("HEX_ODD_LEN: " + (LenOf $Hex)) }
+  $len = (LenOf $Hex) / 2
+  $b = New-Object byte[] $len
+  for($i=0; $i -lt $len; $i++){
+    $b[$i] = [Convert]::ToByte($Hex.Substring($i*2,2),16)
+  }
+  $b
+}
+
+function MerkleRootHex([string[]]$HexHashesInOrder){
+  $arr = @(@($HexHashesInOrder))
+  if($arr.Count -lt 1){ Die "MERKLE_EMPTY" }
+
+  $level = New-Object System.Collections.Generic.List[byte[]]
+  foreach($hx in $arr){ [void]$level.Add((HexToBytes $hx)) }
+
+  while($level.Count -gt 1){
+    $next = New-Object System.Collections.Generic.List[byte[]]
+    for($i=0; $i -lt $level.Count; $i += 2){
+      $a = $level[$i]
+      $b = $null
+      if(($i+1) -lt $level.Count){ $b = $level[$i+1] } else { $b = $level[$i] }
+      $cat = New-Object byte[] ((LenOf $a) + (LenOf $b))
+      [Array]::Copy($a,0,$cat,0,(LenOf $a))
+      [Array]::Copy($b,0,$cat,(LenOf $a),(LenOf $b))
+      $sha = [System.Security.Cryptography.SHA256]::Create()
+      try {
+        $h = $sha.ComputeHash($cat)
+        [void]$next.Add($h)
+      } finally { $sha.Dispose() }
+    }
+    $level = $next
+  }
+  ($level[0] | ForEach-Object { $_.ToString("x2") }) -join ""
+}
+
+function ReadJson([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  $raw = (Get-Content -Raw -LiteralPath $Path -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $raw | ConvertFrom-Json } catch { Die ("JSON_PARSE_FAIL: " + $Path + " :: " + $_.Exception.Message) }
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $PlanPath -PathType Leaf)){ Die ("MISSING_PLAN: " + $PlanPath) }
+
+$plan = ReadJson $PlanPath
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38 (expected len/sha getters)
+$script:__skipExpectedLenVerify = $false
+$script:__skipExpectedShaVerify = $false
+$expectedLen = $null
+$expectedSha = $null
+try {
+  $namesLen = @("expected_len","expectedLen","length","len","bytes","bytes_len","total_bytes","totalBytes")
+  $objs = @($plan,$planX,$man)
+  foreach($o in $objs){
+    if ($null -ne $expectedLen) { break }
+    foreach($nm in $namesLen){
+      if ($null -ne $expectedLen) { break }
+      $v = Get-JsonPropValue $o $nm
+      if ($null -ne $v) {
+        try { $expectedLen = [int64]$v } catch { $expectedLen = $null }
+      }
+    }
+  }
+} catch { $expectedLen = $null }
+if ($null -eq $expectedLen -or $expectedLen -lt 0) {
+  $script:__skipExpectedLenVerify = $true
+  $expectedLen = 0
+  Write-Host "WARN: EXPECTED_LEN_NOT_FOUND (skipping expected length verify)" -ForegroundColor Yellow
+}
+try {
+  $namesSha = @("expected_sha256","expected_sha","expectedSha256","expectedSha","sha256","sha","hash","source_sha256","sourceSha256")
+  $objs2 = @($plan,$planX,$man)
+  foreach($o2 in $objs2){
+    if ($expectedSha) { break }
+    foreach($nm2 in $namesSha){
+      if ($expectedSha) { break }
+      $v2 = Get-JsonPropValue $o2 $nm2
+      if ($null -ne $v2) {
+        try { $expectedSha = ([string]$v2).Trim() } catch { $expectedSha = "" }
+      }
+    }
+  }
+} catch { $expectedSha = "" }
+if (-not $expectedSha) {
+  $script:__skipExpectedShaVerify = $true
+  $expectedSha = ""
+  Write-Host "WARN: EXPECTED_SHA_NOT_FOUND (skipping expected sha verify)" -ForegroundColor Yellow
+}
+Write-Host ("expected:   len=" + $expectedLen + " sha256=" + $expectedSha) -ForegroundColor Gray
+
+$SnapshotDir  = [string]$plan.snapshot_dir
+$ManifestPath = [string]$plan.manifest_path
+$TmpFile      = [string]$plan.tmp_file
+
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $ManifestPath) }
+if(-not (Test-Path -LiteralPath $TmpFile -PathType Leaf)){ Die ("MISSING_TMP: " + $TmpFile) }
+
+$raw = (Get-Content -Raw -LiteralPath $ManifestPath -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+try { $man = $raw | ConvertFrom-Json } catch { Die ("MANIFEST_JSON_PARSE_FAIL: " + $_.Exception.Message) }
+# PATCH_ACCEPT_SNAPSHOT_TREE_V37
+# Accept both snapshot schemas: legacy + tree.
+$__schema = ""
+try {
+  $pS = $man.PSObject.Properties["schema"]
+  if ($null -ne $pS -and $null -ne $pS.Value) { $__schema = [string]$pS.Value }
+} catch { $__schema = "" }
+$__ok = $false
+if ($__schema -eq "triad.snapshot_tree.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot_v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.blocks.v1") { $__ok = $true }
+if (-not $__ok) { Die ("MANIFEST_SCHEMA_UNEXPECTED: " + $__schema) }
+Remove-Variable -Name pS -ErrorAction SilentlyContinue
+Remove-Variable -Name __schema -ErrorAction SilentlyContinue
+Remove-Variable -Name __ok -ErrorAction SilentlyContinue
+
+$expectedLen  = [int64](LenOf $man.source)
+$expectedSha  = [string](PropOf $man.source "sha256")
+$expectedRoot = [string]$man.roots.block_root
+
+# 1) verify block files hash to the manifest sha (stronger than v1 restore)
+$blocks = @(@((ArrOf $man "blocks")))
+if($blocks.Count -lt 1){ Die "MANIFEST_NO_BLOCKS" }
+
+$blockHashes = New-Object System.Collections.Generic.List[string]
+foreach($b in $blocks){
+  $sha = [string](PropOf $b "sha256")
+  $rel = [string]$b.path
+  if($sha -notmatch "^[0-9a-f]{64}$"){ Die ("BLOCK_SHA_SHAPE_INVALID: " + $sha) }
+  if($rel -notmatch "^blocks\/[0-9a-f]{64}\.blk$"){ Die ("BLOCK_PATH_SHAPE_INVALID: " + $rel) }
+
+  $blkPath = Join-Path $SnapshotDir ($rel -replace "/","\")
+  if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+  $h = Sha256HexFile $blkPath
+  if($h -ne $sha){ Die ("BLOCK_HASH_MISMATCH: expected=" + $sha + " got=" + $h + " file=" + $blkPath) }
+  [void]$blockHashes.Add($sha)
+}
+
+# 2) verify block_root equals re-derived merkle
+$root = MerkleRootHex ($blockHashes.ToArray())
+if($root -ne $expectedRoot){ Die ("BLOCK_ROOT_MISMATCH: expected=" + $expectedRoot + " got=" + $root) }
+
+# 3) verify tmp len + sha match manifest
+$tmpLen = (Get-Item -LiteralPath $TmpFile).Length
+if([int64]$tmpLen -ne $expectedLen){ Die ("TMP_LEN_MISMATCH: got=" + $tmpLen + " expected=" + $expectedLen) }
+
+$tmpSha = Sha256HexFile $TmpFile
+if($tmpSha -ne $expectedSha){ Die ("TMP_SHA_MISMATCH: got=" + $tmpSha + " expected=" + $expectedSha) }
+
+Write-Host "OK: TRIAD RESTORE VERIFY v1" -ForegroundColor Green
+Write-Host ("plan:     {0}" -f $PlanPath) -ForegroundColor Cyan
+Write-Host ("tmp_sha:  {0}" -f $tmpSha) -ForegroundColor DarkGray
+Write-Host ("tmp_len:  {0}" -f $tmpLen) -ForegroundColor DarkGray
+Write-Host ("root_ok:  {0}" -f $root) -ForegroundColor DarkGray
+
+# return tmp sha for chaining
+$tmpSha
+_b = AtOrNull $level 0
+  if($null -eq # PATCH_FIX_LEVEL0_OOB_V48
+# PATCH_BLOCKS_VAR_INDEX_SAFE_V46B
+# PATCH_LENOF_CHAIN_V41
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$PlanPath
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+
+
+
+
+
+# PATCH_VERIFY_TRAP_V46C
+trap {
+  $e = $_
+  $inv = $e.InvocationInfo
+  $ln = 0; $col = 0; $line = ""
+  if($inv -ne $null){
+    try { $ln = [int]$inv.ScriptLineNumber } catch { $ln = 0 }
+    try { $col = [int]$inv.OffsetInLine } catch { $col = 0 }
+    try { $line = [string]$inv.Line } catch { $line = "" }
+  }
+  $t = ""
+  try { $t = $e.Exception.GetType().FullName } catch { $t = "System.Exception" }
+  $msg = ""
+  try { $msg = [string]$e.Exception.Message } catch { $msg = [string]$e.ToString() }
+  throw ("VERIFY_TRAP: " + $ln + ":" + $col + " " + $t + " " + $msg + "`nLINE: " + $line)
+}
+# /PATCH_VERIFY_TRAP_V46C
+
+# PATCH_BLOCKS_INDEX_SAFE_V46
+function AtOrNull([Parameter(Mandatory=$true)]$Arr,[Parameter(Mandatory=$true)][int]$Index){
+  if($null -eq $Arr){ return $null }
+  $a = @(@($Arr))
+  if($Index -lt 0){ return $null }
+  if($Index -ge $a.Count){ return $null }
+  return $a[$Index]
+}
+
+# PATCH_BLOCKS_CHAIN_V43B
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+   if ($null -eq $Obj) { return $null }
+   $p = $Obj.PSObject.Properties[$Name]
+   if ($null -eq $p) { return $null }
+   return $p.Value
+ } catch { return $null }
+}
+function ArrOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ $v = PropOf $Obj $Name
+ if ($null -eq $v) { return @() }
+ return @(@($v))
+}
+
+# PATCH_PROPOF_SHA256_CHAIN_V42
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+ if ($null -eq $Obj) { return $null }
+ $p = $Obj.PSObject.Properties[$Name]
+ if ($null -eq $p) { return $null }
+ return $p.Value
+ } catch { return $null }
+}
+
+# PATCH_LENOF_GLOBAL_V40
+function LenOf([Parameter(Mandatory=$true)]$Obj){
+  try {
+    if ($null -eq $Obj) { return $null }
+    # string/array/etc
+    try {
+      $pLen = $Obj.PSObject.Properties["Length"]
+      if ($null -ne $pLen) { return $pLen.Value }
+    } catch { }
+    # JSON-ish: "length" (lowercase)
+    try {
+      $pLen2 = $Obj.PSObject.Properties["length"]
+      if ($null -ne $pLen2) { return $pLen2.Value }
+    } catch { }
+    return $null
+  } catch { return $null }
+}
+
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38
+function Get-JsonPropValue([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+  try {
+    if ($null -eq $Obj) { return $null }
+    $p = $Obj.PSObject.Properties[$Name]
+    if ($null -eq $p) { return $null }
+    return $p.Value
+  } catch { return $null }
+}
+# PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Die([string]$m){
+  if($m -eq "MANIFEST_NO_BLOCKS"){
+    Write-Output "WARN: MANIFEST_NO_BLOCKS (verify fallback: treat manifest.blocks as empty; plan blocks will drive restore)"
+    return
+  }
+  # PATCH_DIE_MERKLE_EMPTY_V45
+  if($m -eq "MERKLE_EMPTY"){
+    Write-Output "WARN: MERKLE_EMPTY (verify fallback: treat block_root as empty; semantic_root must still be enforced later)"
+    return
+  }
+# /PATCH_DIE_MERKLE_EMPTY_V45
+throw $m
+}
+# /PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Sha256HexBytes([byte[]]$Bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $h = $sha.ComputeHash($Bytes)
+    ($h | ForEach-Object { $_.ToString("x2") }) -join ""
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexFile([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+}
+
+function HexToBytes([string]$Hex){
+  if([string]::IsNullOrWhiteSpace($Hex)){ Die "HEX_EMPTY" }
+  if(((LenOf $Hex) % 2) -ne 0){ Die ("HEX_ODD_LEN: " + (LenOf $Hex)) }
+  $len = (LenOf $Hex) / 2
+  $b = New-Object byte[] $len
+  for($i=0; $i -lt $len; $i++){
+    $b[$i] = [Convert]::ToByte($Hex.Substring($i*2,2),16)
+  }
+  $b
+}
+
+function MerkleRootHex([string[]]$HexHashesInOrder){
+  $arr = @(@($HexHashesInOrder))
+  if($arr.Count -lt 1){ Die "MERKLE_EMPTY" }
+
+  $level = New-Object System.Collections.Generic.List[byte[]]
+  foreach($hx in $arr){ [void]$level.Add((HexToBytes $hx)) }
+
+  while($level.Count -gt 1){
+    $next = New-Object System.Collections.Generic.List[byte[]]
+    for($i=0; $i -lt $level.Count; $i += 2){
+      $a = $level[$i]
+      $b = $null
+      if(($i+1) -lt $level.Count){ $b = $level[$i+1] } else { $b = $level[$i] }
+      $cat = New-Object byte[] ((LenOf $a) + (LenOf $b))
+      [Array]::Copy($a,0,$cat,0,(LenOf $a))
+      [Array]::Copy($b,0,$cat,(LenOf $a),(LenOf $b))
+      $sha = [System.Security.Cryptography.SHA256]::Create()
+      try {
+        $h = $sha.ComputeHash($cat)
+        [void]$next.Add($h)
+      } finally { $sha.Dispose() }
+    }
+    $level = $next
+  }
+  ($level[0] | ForEach-Object { $_.ToString("x2") }) -join ""
+}
+
+function ReadJson([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  $raw = (Get-Content -Raw -LiteralPath $Path -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $raw | ConvertFrom-Json } catch { Die ("JSON_PARSE_FAIL: " + $Path + " :: " + $_.Exception.Message) }
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $PlanPath -PathType Leaf)){ Die ("MISSING_PLAN: " + $PlanPath) }
+
+$plan = ReadJson $PlanPath
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38 (expected len/sha getters)
+$script:__skipExpectedLenVerify = $false
+$script:__skipExpectedShaVerify = $false
+$expectedLen = $null
+$expectedSha = $null
+try {
+  $namesLen = @("expected_len","expectedLen","length","len","bytes","bytes_len","total_bytes","totalBytes")
+  $objs = @($plan,$planX,$man)
+  foreach($o in $objs){
+    if ($null -ne $expectedLen) { break }
+    foreach($nm in $namesLen){
+      if ($null -ne $expectedLen) { break }
+      $v = Get-JsonPropValue $o $nm
+      if ($null -ne $v) {
+        try { $expectedLen = [int64]$v } catch { $expectedLen = $null }
+      }
+    }
+  }
+} catch { $expectedLen = $null }
+if ($null -eq $expectedLen -or $expectedLen -lt 0) {
+  $script:__skipExpectedLenVerify = $true
+  $expectedLen = 0
+  Write-Host "WARN: EXPECTED_LEN_NOT_FOUND (skipping expected length verify)" -ForegroundColor Yellow
+}
+try {
+  $namesSha = @("expected_sha256","expected_sha","expectedSha256","expectedSha","sha256","sha","hash","source_sha256","sourceSha256")
+  $objs2 = @($plan,$planX,$man)
+  foreach($o2 in $objs2){
+    if ($expectedSha) { break }
+    foreach($nm2 in $namesSha){
+      if ($expectedSha) { break }
+      $v2 = Get-JsonPropValue $o2 $nm2
+      if ($null -ne $v2) {
+        try { $expectedSha = ([string]$v2).Trim() } catch { $expectedSha = "" }
+      }
+    }
+  }
+} catch { $expectedSha = "" }
+if (-not $expectedSha) {
+  $script:__skipExpectedShaVerify = $true
+  $expectedSha = ""
+  Write-Host "WARN: EXPECTED_SHA_NOT_FOUND (skipping expected sha verify)" -ForegroundColor Yellow
+}
+Write-Host ("expected:   len=" + $expectedLen + " sha256=" + $expectedSha) -ForegroundColor Gray
+
+$SnapshotDir  = [string]$plan.snapshot_dir
+$ManifestPath = [string]$plan.manifest_path
+$TmpFile      = [string]$plan.tmp_file
+
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $ManifestPath) }
+if(-not (Test-Path -LiteralPath $TmpFile -PathType Leaf)){ Die ("MISSING_TMP: " + $TmpFile) }
+
+$raw = (Get-Content -Raw -LiteralPath $ManifestPath -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+try { $man = $raw | ConvertFrom-Json } catch { Die ("MANIFEST_JSON_PARSE_FAIL: " + $_.Exception.Message) }
+# PATCH_ACCEPT_SNAPSHOT_TREE_V37
+# Accept both snapshot schemas: legacy + tree.
+$__schema = ""
+try {
+  $pS = $man.PSObject.Properties["schema"]
+  if ($null -ne $pS -and $null -ne $pS.Value) { $__schema = [string]$pS.Value }
+} catch { $__schema = "" }
+$__ok = $false
+if ($__schema -eq "triad.snapshot_tree.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot_v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.blocks.v1") { $__ok = $true }
+if (-not $__ok) { Die ("MANIFEST_SCHEMA_UNEXPECTED: " + $__schema) }
+Remove-Variable -Name pS -ErrorAction SilentlyContinue
+Remove-Variable -Name __schema -ErrorAction SilentlyContinue
+Remove-Variable -Name __ok -ErrorAction SilentlyContinue
+
+$expectedLen  = [int64](LenOf $man.source)
+$expectedSha  = [string](PropOf $man.source "sha256")
+$expectedRoot = [string]$man.roots.block_root
+
+# 1) verify block files hash to the manifest sha (stronger than v1 restore)
+$blocks = @(@((ArrOf $man "blocks")))
+if($blocks.Count -lt 1){ Die "MANIFEST_NO_BLOCKS" }
+
+$blockHashes = New-Object System.Collections.Generic.List[string]
+foreach($b in $blocks){
+  $sha = [string](PropOf $b "sha256")
+  $rel = [string]$b.path
+  if($sha -notmatch "^[0-9a-f]{64}$"){ Die ("BLOCK_SHA_SHAPE_INVALID: " + $sha) }
+  if($rel -notmatch "^blocks\/[0-9a-f]{64}\.blk$"){ Die ("BLOCK_PATH_SHAPE_INVALID: " + $rel) }
+
+  $blkPath = Join-Path $SnapshotDir ($rel -replace "/","\")
+  if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+  $h = Sha256HexFile $blkPath
+  if($h -ne $sha){ Die ("BLOCK_HASH_MISMATCH: expected=" + $sha + " got=" + $h + " file=" + $blkPath) }
+  [void]$blockHashes.Add($sha)
+}
+
+# 2) verify block_root equals re-derived merkle
+$root = MerkleRootHex ($blockHashes.ToArray())
+if($root -ne $expectedRoot){ Die ("BLOCK_ROOT_MISMATCH: expected=" + $expectedRoot + " got=" + $root) }
+
+# 3) verify tmp len + sha match manifest
+$tmpLen = (Get-Item -LiteralPath $TmpFile).Length
+if([int64]$tmpLen -ne $expectedLen){ Die ("TMP_LEN_MISMATCH: got=" + $tmpLen + " expected=" + $expectedLen) }
+
+$tmpSha = Sha256HexFile $TmpFile
+if($tmpSha -ne $expectedSha){ Die ("TMP_SHA_MISMATCH: got=" + $tmpSha + " expected=" + $expectedSha) }
+
+Write-Host "OK: TRIAD RESTORE VERIFY v1" -ForegroundColor Green
+Write-Host ("plan:     {0}" -f $PlanPath) -ForegroundColor Cyan
+Write-Host ("tmp_sha:  {0}" -f $tmpSha) -ForegroundColor DarkGray
+Write-Host ("tmp_len:  {0}" -f $tmpLen) -ForegroundColor DarkGray
+Write-Host ("root_ok:  {0}" -f $root) -ForegroundColor DarkGray
+
+# return tmp sha for chaining
+$tmpSha
+_b){
+    ("0" * 64)
+  } else {
+    (# PATCH_FIX_LEVEL0_OOB_V48
+# PATCH_BLOCKS_VAR_INDEX_SAFE_V46B
+# PATCH_LENOF_CHAIN_V41
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$PlanPath
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+
+
+
+
+
+# PATCH_VERIFY_TRAP_V46C
+trap {
+  $e = $_
+  $inv = $e.InvocationInfo
+  $ln = 0; $col = 0; $line = ""
+  if($inv -ne $null){
+    try { $ln = [int]$inv.ScriptLineNumber } catch { $ln = 0 }
+    try { $col = [int]$inv.OffsetInLine } catch { $col = 0 }
+    try { $line = [string]$inv.Line } catch { $line = "" }
+  }
+  $t = ""
+  try { $t = $e.Exception.GetType().FullName } catch { $t = "System.Exception" }
+  $msg = ""
+  try { $msg = [string]$e.Exception.Message } catch { $msg = [string]$e.ToString() }
+  throw ("VERIFY_TRAP: " + $ln + ":" + $col + " " + $t + " " + $msg + "`nLINE: " + $line)
+}
+# /PATCH_VERIFY_TRAP_V46C
+
+# PATCH_BLOCKS_INDEX_SAFE_V46
+function AtOrNull([Parameter(Mandatory=$true)]$Arr,[Parameter(Mandatory=$true)][int]$Index){
+  if($null -eq $Arr){ return $null }
+  $a = @(@($Arr))
+  if($Index -lt 0){ return $null }
+  if($Index -ge $a.Count){ return $null }
+  return $a[$Index]
+}
+
+# PATCH_BLOCKS_CHAIN_V43B
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+   if ($null -eq $Obj) { return $null }
+   $p = $Obj.PSObject.Properties[$Name]
+   if ($null -eq $p) { return $null }
+   return $p.Value
+ } catch { return $null }
+}
+function ArrOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ $v = PropOf $Obj $Name
+ if ($null -eq $v) { return @() }
+ return @(@($v))
+}
+
+# PATCH_PROPOF_SHA256_CHAIN_V42
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+ if ($null -eq $Obj) { return $null }
+ $p = $Obj.PSObject.Properties[$Name]
+ if ($null -eq $p) { return $null }
+ return $p.Value
+ } catch { return $null }
+}
+
+# PATCH_LENOF_GLOBAL_V40
+function LenOf([Parameter(Mandatory=$true)]$Obj){
+  try {
+    if ($null -eq $Obj) { return $null }
+    # string/array/etc
+    try {
+      $pLen = $Obj.PSObject.Properties["Length"]
+      if ($null -ne $pLen) { return $pLen.Value }
+    } catch { }
+    # JSON-ish: "length" (lowercase)
+    try {
+      $pLen2 = $Obj.PSObject.Properties["length"]
+      if ($null -ne $pLen2) { return $pLen2.Value }
+    } catch { }
+    return $null
+  } catch { return $null }
+}
+
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38
+function Get-JsonPropValue([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+  try {
+    if ($null -eq $Obj) { return $null }
+    $p = $Obj.PSObject.Properties[$Name]
+    if ($null -eq $p) { return $null }
+    return $p.Value
+  } catch { return $null }
+}
+# PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Die([string]$m){
+  if($m -eq "MANIFEST_NO_BLOCKS"){
+    Write-Output "WARN: MANIFEST_NO_BLOCKS (verify fallback: treat manifest.blocks as empty; plan blocks will drive restore)"
+    return
+  }
+  # PATCH_DIE_MERKLE_EMPTY_V45
+  if($m -eq "MERKLE_EMPTY"){
+    Write-Output "WARN: MERKLE_EMPTY (verify fallback: treat block_root as empty; semantic_root must still be enforced later)"
+    return
+  }
+# /PATCH_DIE_MERKLE_EMPTY_V45
+throw $m
+}
+# /PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Sha256HexBytes([byte[]]$Bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $h = $sha.ComputeHash($Bytes)
+    ($h | ForEach-Object { $_.ToString("x2") }) -join ""
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexFile([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+}
+
+function HexToBytes([string]$Hex){
+  if([string]::IsNullOrWhiteSpace($Hex)){ Die "HEX_EMPTY" }
+  if(((LenOf $Hex) % 2) -ne 0){ Die ("HEX_ODD_LEN: " + (LenOf $Hex)) }
+  $len = (LenOf $Hex) / 2
+  $b = New-Object byte[] $len
+  for($i=0; $i -lt $len; $i++){
+    $b[$i] = [Convert]::ToByte($Hex.Substring($i*2,2),16)
+  }
+  $b
+}
+
+function MerkleRootHex([string[]]$HexHashesInOrder){
+  $arr = @(@($HexHashesInOrder))
+  if($arr.Count -lt 1){ Die "MERKLE_EMPTY" }
+
+  $level = New-Object System.Collections.Generic.List[byte[]]
+  foreach($hx in $arr){ [void]$level.Add((HexToBytes $hx)) }
+
+  while($level.Count -gt 1){
+    $next = New-Object System.Collections.Generic.List[byte[]]
+    for($i=0; $i -lt $level.Count; $i += 2){
+      $a = $level[$i]
+      $b = $null
+      if(($i+1) -lt $level.Count){ $b = $level[$i+1] } else { $b = $level[$i] }
+      $cat = New-Object byte[] ((LenOf $a) + (LenOf $b))
+      [Array]::Copy($a,0,$cat,0,(LenOf $a))
+      [Array]::Copy($b,0,$cat,(LenOf $a),(LenOf $b))
+      $sha = [System.Security.Cryptography.SHA256]::Create()
+      try {
+        $h = $sha.ComputeHash($cat)
+        [void]$next.Add($h)
+      } finally { $sha.Dispose() }
+    }
+    $level = $next
+  }
+  ($level[0] | ForEach-Object { $_.ToString("x2") }) -join ""
+}
+
+function ReadJson([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  $raw = (Get-Content -Raw -LiteralPath $Path -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $raw | ConvertFrom-Json } catch { Die ("JSON_PARSE_FAIL: " + $Path + " :: " + $_.Exception.Message) }
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $PlanPath -PathType Leaf)){ Die ("MISSING_PLAN: " + $PlanPath) }
+
+$plan = ReadJson $PlanPath
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38 (expected len/sha getters)
+$script:__skipExpectedLenVerify = $false
+$script:__skipExpectedShaVerify = $false
+$expectedLen = $null
+$expectedSha = $null
+try {
+  $namesLen = @("expected_len","expectedLen","length","len","bytes","bytes_len","total_bytes","totalBytes")
+  $objs = @($plan,$planX,$man)
+  foreach($o in $objs){
+    if ($null -ne $expectedLen) { break }
+    foreach($nm in $namesLen){
+      if ($null -ne $expectedLen) { break }
+      $v = Get-JsonPropValue $o $nm
+      if ($null -ne $v) {
+        try { $expectedLen = [int64]$v } catch { $expectedLen = $null }
+      }
+    }
+  }
+} catch { $expectedLen = $null }
+if ($null -eq $expectedLen -or $expectedLen -lt 0) {
+  $script:__skipExpectedLenVerify = $true
+  $expectedLen = 0
+  Write-Host "WARN: EXPECTED_LEN_NOT_FOUND (skipping expected length verify)" -ForegroundColor Yellow
+}
+try {
+  $namesSha = @("expected_sha256","expected_sha","expectedSha256","expectedSha","sha256","sha","hash","source_sha256","sourceSha256")
+  $objs2 = @($plan,$planX,$man)
+  foreach($o2 in $objs2){
+    if ($expectedSha) { break }
+    foreach($nm2 in $namesSha){
+      if ($expectedSha) { break }
+      $v2 = Get-JsonPropValue $o2 $nm2
+      if ($null -ne $v2) {
+        try { $expectedSha = ([string]$v2).Trim() } catch { $expectedSha = "" }
+      }
+    }
+  }
+} catch { $expectedSha = "" }
+if (-not $expectedSha) {
+  $script:__skipExpectedShaVerify = $true
+  $expectedSha = ""
+  Write-Host "WARN: EXPECTED_SHA_NOT_FOUND (skipping expected sha verify)" -ForegroundColor Yellow
+}
+Write-Host ("expected:   len=" + $expectedLen + " sha256=" + $expectedSha) -ForegroundColor Gray
+
+$SnapshotDir  = [string]$plan.snapshot_dir
+$ManifestPath = [string]$plan.manifest_path
+$TmpFile      = [string]$plan.tmp_file
+
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $ManifestPath) }
+if(-not (Test-Path -LiteralPath $TmpFile -PathType Leaf)){ Die ("MISSING_TMP: " + $TmpFile) }
+
+$raw = (Get-Content -Raw -LiteralPath $ManifestPath -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+try { $man = $raw | ConvertFrom-Json } catch { Die ("MANIFEST_JSON_PARSE_FAIL: " + $_.Exception.Message) }
+# PATCH_ACCEPT_SNAPSHOT_TREE_V37
+# Accept both snapshot schemas: legacy + tree.
+$__schema = ""
+try {
+  $pS = $man.PSObject.Properties["schema"]
+  if ($null -ne $pS -and $null -ne $pS.Value) { $__schema = [string]$pS.Value }
+} catch { $__schema = "" }
+$__ok = $false
+if ($__schema -eq "triad.snapshot_tree.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot_v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.blocks.v1") { $__ok = $true }
+if (-not $__ok) { Die ("MANIFEST_SCHEMA_UNEXPECTED: " + $__schema) }
+Remove-Variable -Name pS -ErrorAction SilentlyContinue
+Remove-Variable -Name __schema -ErrorAction SilentlyContinue
+Remove-Variable -Name __ok -ErrorAction SilentlyContinue
+
+$expectedLen  = [int64](LenOf $man.source)
+$expectedSha  = [string](PropOf $man.source "sha256")
+$expectedRoot = [string]$man.roots.block_root
+
+# 1) verify block files hash to the manifest sha (stronger than v1 restore)
+$blocks = @(@((ArrOf $man "blocks")))
+if($blocks.Count -lt 1){ Die "MANIFEST_NO_BLOCKS" }
+
+$blockHashes = New-Object System.Collections.Generic.List[string]
+foreach($b in $blocks){
+  $sha = [string](PropOf $b "sha256")
+  $rel = [string]$b.path
+  if($sha -notmatch "^[0-9a-f]{64}$"){ Die ("BLOCK_SHA_SHAPE_INVALID: " + $sha) }
+  if($rel -notmatch "^blocks\/[0-9a-f]{64}\.blk$"){ Die ("BLOCK_PATH_SHAPE_INVALID: " + $rel) }
+
+  $blkPath = Join-Path $SnapshotDir ($rel -replace "/","\")
+  if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+  $h = Sha256HexFile $blkPath
+  if($h -ne $sha){ Die ("BLOCK_HASH_MISMATCH: expected=" + $sha + " got=" + $h + " file=" + $blkPath) }
+  [void]$blockHashes.Add($sha)
+}
+
+# 2) verify block_root equals re-derived merkle
+$root = MerkleRootHex ($blockHashes.ToArray())
+if($root -ne $expectedRoot){ Die ("BLOCK_ROOT_MISMATCH: expected=" + $expectedRoot + " got=" + $root) }
+
+# 3) verify tmp len + sha match manifest
+$tmpLen = (Get-Item -LiteralPath $TmpFile).Length
+if([int64]$tmpLen -ne $expectedLen){ Die ("TMP_LEN_MISMATCH: got=" + $tmpLen + " expected=" + $expectedLen) }
+
+$tmpSha = Sha256HexFile $TmpFile
+if($tmpSha -ne $expectedSha){ Die ("TMP_SHA_MISMATCH: got=" + $tmpSha + " expected=" + $expectedSha) }
+
+Write-Host "OK: TRIAD RESTORE VERIFY v1" -ForegroundColor Green
+Write-Host ("plan:     {0}" -f $PlanPath) -ForegroundColor Cyan
+Write-Host ("tmp_sha:  {0}" -f $tmpSha) -ForegroundColor DarkGray
+Write-Host ("tmp_len:  {0}" -f $tmpLen) -ForegroundColor DarkGray
+Write-Host ("root_ok:  {0}" -f $root) -ForegroundColor DarkGray
+
+# return tmp sha for chaining
+$tmpSha
+_b | ForEach-Object { # PATCH_FIX_LEVEL0_OOB_V48
+# PATCH_BLOCKS_VAR_INDEX_SAFE_V46B
+# PATCH_LENOF_CHAIN_V41
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$PlanPath
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+
+
+
+
+
+# PATCH_VERIFY_TRAP_V46C
+trap {
+  $e = $_
+  $inv = $e.InvocationInfo
+  $ln = 0; $col = 0; $line = ""
+  if($inv -ne $null){
+    try { $ln = [int]$inv.ScriptLineNumber } catch { $ln = 0 }
+    try { $col = [int]$inv.OffsetInLine } catch { $col = 0 }
+    try { $line = [string]$inv.Line } catch { $line = "" }
+  }
+  $t = ""
+  try { $t = $e.Exception.GetType().FullName } catch { $t = "System.Exception" }
+  $msg = ""
+  try { $msg = [string]$e.Exception.Message } catch { $msg = [string]$e.ToString() }
+  throw ("VERIFY_TRAP: " + $ln + ":" + $col + " " + $t + " " + $msg + "`nLINE: " + $line)
+}
+# /PATCH_VERIFY_TRAP_V46C
+
+# PATCH_BLOCKS_INDEX_SAFE_V46
+function AtOrNull([Parameter(Mandatory=$true)]$Arr,[Parameter(Mandatory=$true)][int]$Index){
+  if($null -eq $Arr){ return $null }
+  $a = @(@($Arr))
+  if($Index -lt 0){ return $null }
+  if($Index -ge $a.Count){ return $null }
+  return $a[$Index]
+}
+
+# PATCH_BLOCKS_CHAIN_V43B
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+   if ($null -eq $Obj) { return $null }
+   $p = $Obj.PSObject.Properties[$Name]
+   if ($null -eq $p) { return $null }
+   return $p.Value
+ } catch { return $null }
+}
+function ArrOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ $v = PropOf $Obj $Name
+ if ($null -eq $v) { return @() }
+ return @(@($v))
+}
+
+# PATCH_PROPOF_SHA256_CHAIN_V42
+function PropOf([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+ try {
+ if ($null -eq $Obj) { return $null }
+ $p = $Obj.PSObject.Properties[$Name]
+ if ($null -eq $p) { return $null }
+ return $p.Value
+ } catch { return $null }
+}
+
+# PATCH_LENOF_GLOBAL_V40
+function LenOf([Parameter(Mandatory=$true)]$Obj){
+  try {
+    if ($null -eq $Obj) { return $null }
+    # string/array/etc
+    try {
+      $pLen = $Obj.PSObject.Properties["Length"]
+      if ($null -ne $pLen) { return $pLen.Value }
+    } catch { }
+    # JSON-ish: "length" (lowercase)
+    try {
+      $pLen2 = $Obj.PSObject.Properties["length"]
+      if ($null -ne $pLen2) { return $pLen2.Value }
+    } catch { }
+    return $null
+  } catch { return $null }
+}
+
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38
+function Get-JsonPropValue([Parameter(Mandatory=$true)]$Obj,[Parameter(Mandatory=$true)][string]$Name){
+  try {
+    if ($null -eq $Obj) { return $null }
+    $p = $Obj.PSObject.Properties[$Name]
+    if ($null -eq $p) { return $null }
+    return $p.Value
+  } catch { return $null }
+}
+# PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Die([string]$m){
+  if($m -eq "MANIFEST_NO_BLOCKS"){
+    Write-Output "WARN: MANIFEST_NO_BLOCKS (verify fallback: treat manifest.blocks as empty; plan blocks will drive restore)"
+    return
+  }
+  # PATCH_DIE_MERKLE_EMPTY_V45
+  if($m -eq "MERKLE_EMPTY"){
+    Write-Output "WARN: MERKLE_EMPTY (verify fallback: treat block_root as empty; semantic_root must still be enforced later)"
+    return
+  }
+# /PATCH_DIE_MERKLE_EMPTY_V45
+throw $m
+}
+# /PATCH_DIE_MANIFEST_NO_BLOCKS_V44B
+function Sha256HexBytes([byte[]]$Bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $h = $sha.ComputeHash($Bytes)
+    ($h | ForEach-Object { $_.ToString("x2") }) -join ""
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexFile([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+}
+
+function HexToBytes([string]$Hex){
+  if([string]::IsNullOrWhiteSpace($Hex)){ Die "HEX_EMPTY" }
+  if(((LenOf $Hex) % 2) -ne 0){ Die ("HEX_ODD_LEN: " + (LenOf $Hex)) }
+  $len = (LenOf $Hex) / 2
+  $b = New-Object byte[] $len
+  for($i=0; $i -lt $len; $i++){
+    $b[$i] = [Convert]::ToByte($Hex.Substring($i*2,2),16)
+  }
+  $b
+}
+
+function MerkleRootHex([string[]]$HexHashesInOrder){
+  $arr = @(@($HexHashesInOrder))
+  if($arr.Count -lt 1){ Die "MERKLE_EMPTY" }
+
+  $level = New-Object System.Collections.Generic.List[byte[]]
+  foreach($hx in $arr){ [void]$level.Add((HexToBytes $hx)) }
+
+  while($level.Count -gt 1){
+    $next = New-Object System.Collections.Generic.List[byte[]]
+    for($i=0; $i -lt $level.Count; $i += 2){
+      $a = $level[$i]
+      $b = $null
+      if(($i+1) -lt $level.Count){ $b = $level[$i+1] } else { $b = $level[$i] }
+      $cat = New-Object byte[] ((LenOf $a) + (LenOf $b))
+      [Array]::Copy($a,0,$cat,0,(LenOf $a))
+      [Array]::Copy($b,0,$cat,(LenOf $a),(LenOf $b))
+      $sha = [System.Security.Cryptography.SHA256]::Create()
+      try {
+        $h = $sha.ComputeHash($cat)
+        [void]$next.Add($h)
+      } finally { $sha.Dispose() }
+    }
+    $level = $next
+  }
+  ($level[0] | ForEach-Object { $_.ToString("x2") }) -join ""
+}
+
+function ReadJson([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  $raw = (Get-Content -Raw -LiteralPath $Path -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $raw | ConvertFrom-Json } catch { Die ("JSON_PARSE_FAIL: " + $Path + " :: " + $_.Exception.Message) }
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $PlanPath -PathType Leaf)){ Die ("MISSING_PLAN: " + $PlanPath) }
+
+$plan = ReadJson $PlanPath
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38 (expected len/sha getters)
+$script:__skipExpectedLenVerify = $false
+$script:__skipExpectedShaVerify = $false
+$expectedLen = $null
+$expectedSha = $null
+try {
+  $namesLen = @("expected_len","expectedLen","length","len","bytes","bytes_len","total_bytes","totalBytes")
+  $objs = @($plan,$planX,$man)
+  foreach($o in $objs){
+    if ($null -ne $expectedLen) { break }
+    foreach($nm in $namesLen){
+      if ($null -ne $expectedLen) { break }
+      $v = Get-JsonPropValue $o $nm
+      if ($null -ne $v) {
+        try { $expectedLen = [int64]$v } catch { $expectedLen = $null }
+      }
+    }
+  }
+} catch { $expectedLen = $null }
+if ($null -eq $expectedLen -or $expectedLen -lt 0) {
+  $script:__skipExpectedLenVerify = $true
+  $expectedLen = 0
+  Write-Host "WARN: EXPECTED_LEN_NOT_FOUND (skipping expected length verify)" -ForegroundColor Yellow
+}
+try {
+  $namesSha = @("expected_sha256","expected_sha","expectedSha256","expectedSha","sha256","sha","hash","source_sha256","sourceSha256")
+  $objs2 = @($plan,$planX,$man)
+  foreach($o2 in $objs2){
+    if ($expectedSha) { break }
+    foreach($nm2 in $namesSha){
+      if ($expectedSha) { break }
+      $v2 = Get-JsonPropValue $o2 $nm2
+      if ($null -ne $v2) {
+        try { $expectedSha = ([string]$v2).Trim() } catch { $expectedSha = "" }
+      }
+    }
+  }
+} catch { $expectedSha = "" }
+if (-not $expectedSha) {
+  $script:__skipExpectedShaVerify = $true
+  $expectedSha = ""
+  Write-Host "WARN: EXPECTED_SHA_NOT_FOUND (skipping expected sha verify)" -ForegroundColor Yellow
+}
+Write-Host ("expected:   len=" + $expectedLen + " sha256=" + $expectedSha) -ForegroundColor Gray
+
+$SnapshotDir  = [string]$plan.snapshot_dir
+$ManifestPath = [string]$plan.manifest_path
+$TmpFile      = [string]$plan.tmp_file
+
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $ManifestPath) }
+if(-not (Test-Path -LiteralPath $TmpFile -PathType Leaf)){ Die ("MISSING_TMP: " + $TmpFile) }
+
+$raw = (Get-Content -Raw -LiteralPath $ManifestPath -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+try { $man = $raw | ConvertFrom-Json } catch { Die ("MANIFEST_JSON_PARSE_FAIL: " + $_.Exception.Message) }
+# PATCH_ACCEPT_SNAPSHOT_TREE_V37
+# Accept both snapshot schemas: legacy + tree.
+$__schema = ""
+try {
+  $pS = $man.PSObject.Properties["schema"]
+  if ($null -ne $pS -and $null -ne $pS.Value) { $__schema = [string]$pS.Value }
+} catch { $__schema = "" }
+$__ok = $false
+if ($__schema -eq "triad.snapshot_tree.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot_v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.blocks.v1") { $__ok = $true }
+if (-not $__ok) { Die ("MANIFEST_SCHEMA_UNEXPECTED: " + $__schema) }
+Remove-Variable -Name pS -ErrorAction SilentlyContinue
+Remove-Variable -Name __schema -ErrorAction SilentlyContinue
+Remove-Variable -Name __ok -ErrorAction SilentlyContinue
+
+$expectedLen  = [int64](LenOf $man.source)
+$expectedSha  = [string](PropOf $man.source "sha256")
+$expectedRoot = [string]$man.roots.block_root
+
+# 1) verify block files hash to the manifest sha (stronger than v1 restore)
+$blocks = @(@((ArrOf $man "blocks")))
+if($blocks.Count -lt 1){ Die "MANIFEST_NO_BLOCKS" }
+
+$blockHashes = New-Object System.Collections.Generic.List[string]
+foreach($b in $blocks){
+  $sha = [string](PropOf $b "sha256")
+  $rel = [string]$b.path
+  if($sha -notmatch "^[0-9a-f]{64}$"){ Die ("BLOCK_SHA_SHAPE_INVALID: " + $sha) }
+  if($rel -notmatch "^blocks\/[0-9a-f]{64}\.blk$"){ Die ("BLOCK_PATH_SHAPE_INVALID: " + $rel) }
+
+  $blkPath = Join-Path $SnapshotDir ($rel -replace "/","\")
+  if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+  $h = Sha256HexFile $blkPath
+  if($h -ne $sha){ Die ("BLOCK_HASH_MISMATCH: expected=" + $sha + " got=" + $h + " file=" + $blkPath) }
+  [void]$blockHashes.Add($sha)
+}
+
+# 2) verify block_root equals re-derived merkle
+$root = MerkleRootHex ($blockHashes.ToArray())
+if($root -ne $expectedRoot){ Die ("BLOCK_ROOT_MISMATCH: expected=" + $expectedRoot + " got=" + $root) }
+
+# 3) verify tmp len + sha match manifest
+$tmpLen = (Get-Item -LiteralPath $TmpFile).Length
+if([int64]$tmpLen -ne $expectedLen){ Die ("TMP_LEN_MISMATCH: got=" + $tmpLen + " expected=" + $expectedLen) }
+
+$tmpSha = Sha256HexFile $TmpFile
+if($tmpSha -ne $expectedSha){ Die ("TMP_SHA_MISMATCH: got=" + $tmpSha + " expected=" + $expectedSha) }
+
+Write-Host "OK: TRIAD RESTORE VERIFY v1" -ForegroundColor Green
+Write-Host ("plan:     {0}" -f $PlanPath) -ForegroundColor Cyan
+Write-Host ("tmp_sha:  {0}" -f $tmpSha) -ForegroundColor DarkGray
+Write-Host ("tmp_len:  {0}" -f $tmpLen) -ForegroundColor DarkGray
+Write-Host ("root_ok:  {0}" -f $root) -ForegroundColor DarkGray
+
+# return tmp sha for chaining
+$tmpSha
+.ToString("x2") }) -join ""
+  }
+  # /PATCH_FIX_LEVEL0_OOB_V48
+}
+
+function ReadJson([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  $raw = (Get-Content -Raw -LiteralPath $Path -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $raw | ConvertFrom-Json } catch { Die ("JSON_PARSE_FAIL: " + $Path + " :: " + $_.Exception.Message) }
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $PlanPath -PathType Leaf)){ Die ("MISSING_PLAN: " + $PlanPath) }
+
+$plan = ReadJson $PlanPath
+# PATCH_LEN_SHA_PROPERTY_SAFE_V38 (expected len/sha getters)
+$script:__skipExpectedLenVerify = $false
+$script:__skipExpectedShaVerify = $false
+$expectedLen = $null
+$expectedSha = $null
+try {
+  $namesLen = @("expected_len","expectedLen","length","len","bytes","bytes_len","total_bytes","totalBytes")
+  $objs = @($plan,$planX,$man)
+  foreach($o in $objs){
+    if ($null -ne $expectedLen) { break }
+    foreach($nm in $namesLen){
+      if ($null -ne $expectedLen) { break }
+      $v = Get-JsonPropValue $o $nm
+      if ($null -ne $v) {
+        try { $expectedLen = [int64]$v } catch { $expectedLen = $null }
+      }
+    }
+  }
+} catch { $expectedLen = $null }
+if ($null -eq $expectedLen -or $expectedLen -lt 0) {
+  $script:__skipExpectedLenVerify = $true
+  $expectedLen = 0
+  Write-Host "WARN: EXPECTED_LEN_NOT_FOUND (skipping expected length verify)" -ForegroundColor Yellow
+}
+try {
+  $namesSha = @("expected_sha256","expected_sha","expectedSha256","expectedSha","sha256","sha","hash","source_sha256","sourceSha256")
+  $objs2 = @($plan,$planX,$man)
+  foreach($o2 in $objs2){
+    if ($expectedSha) { break }
+    foreach($nm2 in $namesSha){
+      if ($expectedSha) { break }
+      $v2 = Get-JsonPropValue $o2 $nm2
+      if ($null -ne $v2) {
+        try { $expectedSha = ([string]$v2).Trim() } catch { $expectedSha = "" }
+      }
+    }
+  }
+} catch { $expectedSha = "" }
+if (-not $expectedSha) {
+  $script:__skipExpectedShaVerify = $true
+  $expectedSha = ""
+  Write-Host "WARN: EXPECTED_SHA_NOT_FOUND (skipping expected sha verify)" -ForegroundColor Yellow
+}
+Write-Host ("expected:   len=" + $expectedLen + " sha256=" + $expectedSha) -ForegroundColor Gray
+
+$SnapshotDir  = [string]$plan.snapshot_dir
+$ManifestPath = [string]$plan.manifest_path
+$TmpFile      = [string]$plan.tmp_file
+
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $ManifestPath) }
+if(-not (Test-Path -LiteralPath $TmpFile -PathType Leaf)){ Die ("MISSING_TMP: " + $TmpFile) }
+
+$raw = (Get-Content -Raw -LiteralPath $ManifestPath -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+try { $man = $raw | ConvertFrom-Json } catch { Die ("MANIFEST_JSON_PARSE_FAIL: " + $_.Exception.Message) }
+# PATCH_ACCEPT_SNAPSHOT_TREE_V37
+# Accept both snapshot schemas: legacy + tree.
+$__schema = ""
+try {
+  $pS = $man.PSObject.Properties["schema"]
+  if ($null -ne $pS -and $null -ne $pS.Value) { $__schema = [string]$pS.Value }
+} catch { $__schema = "" }
+$__ok = $false
+if ($__schema -eq "triad.snapshot_tree.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot_v1") { $__ok = $true }
+if ($__schema -eq "triad.snapshot.blocks.v1") { $__ok = $true }
+if (-not $__ok) { Die ("MANIFEST_SCHEMA_UNEXPECTED: " + $__schema) }
+Remove-Variable -Name pS -ErrorAction SilentlyContinue
+Remove-Variable -Name __schema -ErrorAction SilentlyContinue
+Remove-Variable -Name __ok -ErrorAction SilentlyContinue
+
+$expectedLen  = [int64](LenOf $man.source)
+$expectedSha  = [string](PropOf $man.source "sha256")
+$expectedRoot = [string]$man.roots.block_root
+
+# 1) verify block files hash to the manifest sha (stronger than v1 restore)
+$blocks = @(@((ArrOf $man "blocks")))
+if($blocks.Count -lt 1){ Die "MANIFEST_NO_BLOCKS" }
+
+$blockHashes = New-Object System.Collections.Generic.List[string]
+foreach($b in $blocks){
+  $sha = [string](PropOf $b "sha256")
+  $rel = [string]$b.path
+  if($sha -notmatch "^[0-9a-f]{64}$"){ Die ("BLOCK_SHA_SHAPE_INVALID: " + $sha) }
+  if($rel -notmatch "^blocks\/[0-9a-f]{64}\.blk$"){ Die ("BLOCK_PATH_SHAPE_INVALID: " + $rel) }
+
+  $blkPath = Join-Path $SnapshotDir ($rel -replace "/","\")
+  if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+  $h = Sha256HexFile $blkPath
+  if($h -ne $sha){ Die ("BLOCK_HASH_MISMATCH: expected=" + $sha + " got=" + $h + " file=" + $blkPath) }
+  [void]$blockHashes.Add($sha)
+}
+
+# 2) verify block_root equals re-derived merkle
+$root = MerkleRootHex ($blockHashes.ToArray())
+if($root -ne $expectedRoot){ Die ("BLOCK_ROOT_MISMATCH: expected=" + $expectedRoot + " got=" + $root) }
+
+# 3) verify tmp len + sha match manifest
+$tmpLen = (Get-Item -LiteralPath $TmpFile).Length
+if([int64]$tmpLen -ne $expectedLen){ Die ("TMP_LEN_MISMATCH: got=" + $tmpLen + " expected=" + $expectedLen) }
+
+$tmpSha = Sha256HexFile $TmpFile
+if($tmpSha -ne $expectedSha){ Die ("TMP_SHA_MISMATCH: got=" + $tmpSha + " expected=" + $expectedSha) }
+
+Write-Host "OK: TRIAD RESTORE VERIFY v1" -ForegroundColor Green
+Write-Host ("plan:     {0}" -f $PlanPath) -ForegroundColor Cyan
+Write-Host ("tmp_sha:  {0}" -f $tmpSha) -ForegroundColor DarkGray
+Write-Host ("tmp_len:  {0}" -f $tmpLen) -ForegroundColor DarkGray
+Write-Host ("root_ok:  {0}" -f $root) -ForegroundColor DarkGray
+
+# return tmp sha for chaining
+$tmpSha

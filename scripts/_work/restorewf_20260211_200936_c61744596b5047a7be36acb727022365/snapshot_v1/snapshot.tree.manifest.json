@@ -1,0 +1,72 @@
+{
+    "schema":  "triad.snapshot_tree.v1",
+    "snapshot_id":  "0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78",
+    "created_utc":  "2026-02-11T20:09:37.5224128Z",
+    "identity":  {
+                     "principal":  "single-tenant/local/authority/devbox-1",
+                     "key_id":  "dev-ed25519-1",
+                     "pubkey":  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment"
+                 },
+    "source":  {
+                   "input_dir_name":  "restorewf_20260211_200936_c61744596b5047a7be36acb727022365",
+                   "files":  1,
+                   "dirs":  2,
+                   "total_bytes":  3670016
+               },
+    "chunking":  {
+                     "block_size":  1048576
+                 },
+    "roots":  {
+                  "semantic_root":  "ef819a66ac10db8ddd88a37dc7a31a3fb1d230dcc7123df19e42fce3bae2025f",
+                  "block_root":  "567da45300ee5f0f411da56d315f3850a92b29d5b50236ad12b09c60ace88765"
+              },
+    "entries":  [
+                    {
+                        "type":  "dir",
+                        "path":  "snapshot_v1"
+                    },
+                    {
+                        "type":  "dir",
+                        "path":  "snapshot_v1/blocks"
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "payload.bin",
+                        "length":  3670016,
+                        "sha256":  "a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536",
+                        "roots":  {
+                                      "block_root":  "9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  1048576,
+                                           "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                                           "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                                       },
+                                       {
+                                           "index":  1,
+                                           "offset":  1048576,
+                                           "size":  1048576,
+                                           "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                                           "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                                       },
+                                       {
+                                           "index":  2,
+                                           "offset":  2097152,
+                                           "size":  1048576,
+                                           "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                                           "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                                       },
+                                       {
+                                           "index":  3,
+                                           "offset":  3145728,
+                                           "size":  524288,
+                                           "sha256":  "f28db4dcb00db2447b33538538601081ec1fc575b23e667bfb33ebe740c8df5a",
+                                           "path":  "blocks/f28db4dcb00db2447b33538538601081ec1fc575b23e667bfb33ebe740c8df5a.blk"
+                                       }
+                                   ]
+                    }
+                ]
+}

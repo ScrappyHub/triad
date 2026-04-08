@@ -1,0 +1,10 @@
+freeze_dir: C:\dev\triad\proofs\freeze\triad_restore_green_20260308_004739_0e26f315c83e
+validated_utc: 2026-03-08T01:09:39.6217702Z
+exit_code: 0
+has_verify_token: True
+has_commit_token: True
+has_pass_token: True
+transcript_hash: d6810734badb402cde846564af5e4102ba8f53dcf823ef0b74aa2227e26b8b2b
+stdout_hash: 543b0e2d5c349e53d7f5bfd861e6625baa445988c3003d1e1c2f44ea9f1854d2
+stderr_hash: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+result: FREEZE_VALIDATED_OK

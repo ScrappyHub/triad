@@ -1,0 +1,12 @@
+{
+  "title": "triad.archive.manifest.v1",
+  "type": "object",
+  "required": ["schema","archive_id","root_hash","entry_count","entries"],
+  "properties": {
+    "schema": { "type": "string" },
+    "archive_id": { "type": "string" },
+    "root_hash": { "type": "string" },
+    "entry_count": { "type": "integer" },
+    "entries": { "type": "array" }
+  }
+}

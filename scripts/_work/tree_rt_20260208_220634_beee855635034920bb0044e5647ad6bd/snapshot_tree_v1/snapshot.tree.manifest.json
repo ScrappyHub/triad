@@ -1,0 +1,119 @@
+{
+    "schema":  "triad.snapshot_tree.v1",
+    "snapshot_id":  "52fbdf3bdfecd598b74ee78a922b5464e5199eb189a3f755f44011affeca0c40",
+    "created_utc":  "2026-02-08T22:06:35.9553478Z",
+    "identity":  {
+                     "principal":  "single-tenant/local/authority/devbox-1",
+                     "key_id":  "dev-ed25519-1",
+                     "pubkey":  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment"
+                 },
+    "source":  {
+                   "input_dir_name":  "input_tree",
+                   "files":  3,
+                   "dirs":  3,
+                   "total_bytes":  4980756
+               },
+    "chunking":  {
+                     "block_size":  1048576
+                 },
+    "roots":  {
+                  "semantic_root":  "f7cd2f52f9f4f8698a18d0bd34aba47a4e46365380f3b960261ea3c5c8d1280c",
+                  "block_root":  "f8e3b6fd0940aaa426201621f5b5a151dcd64ff518cc717f38ed3dd587df95dc"
+              },
+    "entries":  [
+                    {
+                        "type":  "dir",
+                        "path":  "a"
+                    },
+                    {
+                        "type":  "dir",
+                        "path":  "a/b"
+                    },
+                    {
+                        "type":  "dir",
+                        "path":  "empty_dir"
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "a/b/two.bin",
+                        "length":  3670016,
+                        "sha256":  "a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536",
+                        "roots":  {
+                                      "block_root":  "9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  1048576,
+                                           "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                                           "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                                       },
+                                       {
+                                           "index":  1,
+                                           "offset":  1048576,
+                                           "size":  1048576,
+                                           "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                                           "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                                       },
+                                       {
+                                           "index":  2,
+                                           "offset":  2097152,
+                                           "size":  1048576,
+                                           "sha256":  "ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b",
+                                           "path":  "blocks/ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk"
+                                       },
+                                       {
+                                           "index":  3,
+                                           "offset":  3145728,
+                                           "size":  524288,
+                                           "sha256":  "f28db4dcb00db2447b33538538601081ec1fc575b23e667bfb33ebe740c8df5a",
+                                           "path":  "blocks/f28db4dcb00db2447b33538538601081ec1fc575b23e667bfb33ebe740c8df5a.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "a/one.bin",
+                        "length":  1310720,
+                        "sha256":  "948869bd8c9acd59e6f52298b1fa8a5d05b97be91b6ecd59379dfad613fdc82e",
+                        "roots":  {
+                                      "block_root":  "017eebb2911dfaf657bd03aa8a3c8de6ecd5744d5a502118b79425df904f844c"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  1048576,
+                                           "sha256":  "470952a05336a638e11755d028432cb890c3240d0b33668038a975e7e3b5b4ef",
+                                           "path":  "blocks/470952a05336a638e11755d028432cb890c3240d0b33668038a975e7e3b5b4ef.blk"
+                                       },
+                                       {
+                                           "index":  1,
+                                           "offset":  1048576,
+                                           "size":  262144,
+                                           "sha256":  "2bc21809bc2b71239d607d49db23a9711670ddb7c434c663e273401f43971a63",
+                                           "path":  "blocks/2bc21809bc2b71239d607d49db23a9711670ddb7c434c663e273401f43971a63.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "root.txt",
+                        "length":  20,
+                        "sha256":  "899f4d2166cfcd09f1b0383e648c966266c1b79be2a37f8f16bf52b68c670292",
+                        "roots":  {
+                                      "block_root":  "899f4d2166cfcd09f1b0383e648c966266c1b79be2a37f8f16bf52b68c670292"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  20,
+                                           "sha256":  "899f4d2166cfcd09f1b0383e648c966266c1b79be2a37f8f16bf52b68c670292",
+                                           "path":  "blocks/899f4d2166cfcd09f1b0383e648c966266c1b79be2a37f8f16bf52b68c670292.blk"
+                                       }
+                                   ]
+                    }
+                ]
+}

@@ -1,0 +1,12 @@
+{
+    "schema":  "triad.restore_plan.v1",
+    "created_utc":  "2026-03-05T21:29:30.0959928Z",
+    "snapshot_dir":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260305_212924_26cb2532a23d426daf8e095dd9bb286e\\snapshot_v1",
+    "manifest_path":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260305_212924_26cb2532a23d426daf8e095dd9bb286e\\snapshot_v1\\snapshot.tree.manifest.json",
+    "out_file":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260305_212924_26cb2532a23d426daf8e095dd9bb286e\\restored.bin",
+    "tmp_file":  "C:\\dev\\triad\\scripts\\_work\\restorewf_20260305_212924_26cb2532a23d426daf8e095dd9bb286e\\restored.bin.triad_tmp_v1_20260305_212930_5c7e7c9aff3a46c6ba71dce61cfa5d90",
+    "expected_len":  3670016,
+    "expected_sha256":  "",
+    "expected_root":  "",
+    "tmp_len":  0
+}

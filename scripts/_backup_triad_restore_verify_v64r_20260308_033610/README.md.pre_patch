@@ -1,0 +1,101 @@
+# TRIAD
+
+TRIAD (Transactional Restore Instrument with Attestation and Determinism) is a deterministic local-first restore substrate for capture, restore planning, restore verification, and transactional restore commit.
+
+## What this project is to spec
+
+TRIAD is:
+
+- the deterministic filesystem capture instrument
+- the deterministic restore planning instrument
+- the deterministic restore verification instrument
+- the transactional restore commit instrument
+- the cryptographic attestation layer for restore correctness
+- the restore substrate for Atlas Artifact and Legacy Doctor
+- a local-first Tier-0 standalone instrument
+- fully verifiable under Packet Constitution v1 discipline
+- append-only transcript and receipt oriented
+- not an interpretation layer: it measures, plans, verifies, and restores
+
+## Current status
+
+Current proven state:
+
+- capture: GREEN
+- prepare: GREEN
+- verify: GREEN
+- commit: GREEN
+- workflow selftest: PASS
+- freeze: VALIDATED
+
+Latest validated freeze:
+
+- snapshot_id: `0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78`
+- payload sha256: `a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536`
+
+## Critical restore contract
+
+TRIAD restore correctness depends on the payload file entry inside `snapshot.tree.manifest.json`.
+
+For tree manifests:
+
+- the payload file entry (for example `path=payload.bin`) is authoritative
+- expected length comes from the payload file entry
+- expected sha256 comes from the payload file entry
+- expected block root comes from the payload file entry roots
+- `payloadEntry.blocks` is authoritative for reconstruction
+- restore replays blocks by `index + offset + size`
+- repeated block reuse is valid
+- naive concatenation of unique `.blk` files is incorrect
+
+## Why this matters
+
+This is the restore-core substrate needed before higher layers can be trusted:
+
+- Atlas Artifact
+- Legacy Doctor
+- future archive / preservation / snapshot engines
+
+## Current definition of done direction
+
+TRIAD reaches Tier-0 completion when:
+
+- capture is deterministic
+- prepare is deterministic
+- verify is strict-mode safe and deterministic
+- commit restores byte-identical output
+- semantic and block roots are validated correctly
+- golden vectors are frozen
+- stress harness passes
+- restore contract is documented clearly
+- Atlas Artifact and Legacy Doctor can use TRIAD as the authoritative restore substrate
+
+## Next locked work
+
+1. Freeze current working state and avoid blind patching
+2. Remove temporary debug instrumentation safely
+3. Add and lock golden vectors
+4. Build stress harness
+5. Document restore contract formally
+6. Move into Atlas Artifact and Legacy Doctor integration
+
+## Running the workflow selftest
+
+From PowerShell 5.1:
+
+```powershell
+cd C:\dev\triad
+powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\scripts\_selftest_triad_restore_workflow_v1.ps1 -RepoRoot C:\dev\triad
+
+Expected pass tokens include:
+
+OK: TRIAD RESTORE VERIFY v1
+
+OK: TRIAD RESTORE COMMIT v1
+
+TRIAD RESTORE WORKFLOW SELFTEST: PASS
+
+Project posture
+
+TRIAD is a governance-first, deterministic, inspectable restore instrument.
+It is intended to be trustworthy because it is verifiable, not because it is opaque.

@@ -1,0 +1,16 @@
+{
+  "schema": "triad.restore.stress.seed.v1",
+  "seed_id": "stress_seed_v1",
+  "snapshot_id": "0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78",
+  "payload_sha256": "a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536",
+  "payload_length": 3670016,
+  "payload_block_root": "9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f",
+  "payload_block_count": 4,
+  "restored_sha256": "a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536",
+  "contract": {
+    "authoritative_source": "payload file entry in snapshot.tree.manifest.json",
+    "reconstruction_rule": "payloadEntry.blocks by index+offset+size",
+    "repeated_block_reuse_valid": true,
+    "naive_unique_blk_concatenation_valid": false
+  }
+}

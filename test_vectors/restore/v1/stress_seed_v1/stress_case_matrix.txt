@@ -1,0 +1,9 @@
+01_locked_green_baseline|positive|PASS|Locked positive baseline from validated green freeze.
+02_repeated_block_reuse_contract|positive|PASS|Repeated block reuse remains valid because replay uses payloadEntry.blocks index+offset+size.
+03_tail_partial_block_contract|positive|PASS|Tail partial block remains valid when final block size is smaller than chunk size.
+04_naive_unique_concat_invalid|negative|FAIL|Naive concatenation of unique .blk files is invalid.
+05_block_sha_corruption_negative|negative|FAIL|Corrupted block bytes must fail block hash validation.
+06_payload_sha_mismatch_negative|negative|FAIL|Payload/output sha mismatch must fail verify.
+07_missing_block_file_negative|negative|FAIL|Missing referenced block file must fail verify.
+08_deeper_tree_seed|todo|TODO|Reserved seed for deeper tree structure vector.
+09_multi_file_seed|todo|TODO|Reserved seed for multi-file restore vector.

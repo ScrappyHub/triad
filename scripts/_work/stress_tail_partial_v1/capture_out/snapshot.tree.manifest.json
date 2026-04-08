@@ -1,0 +1,80 @@
+{
+    "schema":  "triad.snapshot_tree.v1",
+    "snapshot_id":  "8d66b1e6fa086331f10fe5c37f37a14d10b18e697b9dc7a82b9330c77821b2ef",
+    "created_utc":  "2026-04-08T17:12:00.6286561Z",
+    "identity":  {
+                     "principal":  "single-tenant/local/authority/devbox-1",
+                     "key_id":  "dev-ed25519-1",
+                     "pubkey":  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment"
+                 },
+    "source":  {
+                   "input_dir_name":  "input",
+                   "files":  2,
+                   "dirs":  0,
+                   "total_bytes":  2109517
+               },
+    "chunking":  {
+                     "block_size":  1048576
+                 },
+    "roots":  {
+                  "semantic_root":  "9a50ef6c857771c02628dae92f82ee9e59e33404dd855f39efc4ebab62daf8ae",
+                  "block_root":  "b654927011cbc23e9c94a8baaf52ade203071c097e20a50bd525f3f7e0b3d3cd",
+                  "transcript_root":  "526df4b5c9c48d083910706f4f2d54e2828d93f5bc67db7ca659c7febafc0136"
+              },
+    "transcript":  {
+                       "path":  "transcript.ndjson",
+                       "root_path":  "snapshot.transcript_root"
+                   },
+    "entries":  [
+                    {
+                        "type":  "file",
+                        "path":  "notes.txt",
+                        "length":  20,
+                        "sha256":  "3b808c12c78d3ee69d2193baf93c21707c9bc8153c0974585baeefa2bafb5e25",
+                        "roots":  {
+                                      "block_root":  "3b808c12c78d3ee69d2193baf93c21707c9bc8153c0974585baeefa2bafb5e25"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  20,
+                                           "sha256":  "3b808c12c78d3ee69d2193baf93c21707c9bc8153c0974585baeefa2bafb5e25",
+                                           "path":  "blocks/3b808c12c78d3ee69d2193baf93c21707c9bc8153c0974585baeefa2bafb5e25.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "payload.bin",
+                        "length":  2109497,
+                        "sha256":  "ae8c0ae68e2e50c27afcf17b638c57921d93071d42c0404c5ddb03614ca869c6",
+                        "roots":  {
+                                      "block_root":  "6f71f9f80e1f5fbddea2d817c81dba52ecb139646a63ef392718807c13c03c7f"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  1048576,
+                                           "sha256":  "676e748770ff92c5846fb0eda31b2b3257053d27eb6fd691e2a0d39f165db0d0",
+                                           "path":  "blocks/676e748770ff92c5846fb0eda31b2b3257053d27eb6fd691e2a0d39f165db0d0.blk"
+                                       },
+                                       {
+                                           "index":  1,
+                                           "offset":  1048576,
+                                           "size":  1048576,
+                                           "sha256":  "dce48bdb29b17f7246c3e392a0f8d357edbf25248edf3590796aae0affdcd835",
+                                           "path":  "blocks/dce48bdb29b17f7246c3e392a0f8d357edbf25248edf3590796aae0affdcd835.blk"
+                                       },
+                                       {
+                                           "index":  2,
+                                           "offset":  2097152,
+                                           "size":  12345,
+                                           "sha256":  "e58360c0740e4655db227026a0de7abf648bc1d93e207758311ea726c8fdacde",
+                                           "path":  "blocks/e58360c0740e4655db227026a0de7abf648bc1d93e207758311ea726c8fdacde.blk"
+                                       }
+                                   ]
+                    }
+                ]
+}

@@ -1,0 +1,3 @@
+NEG_PLAN: C:\dev\triad\scripts\_work\neg_payload_length_mismatch\plan_mutated.json
+TRIAD_NEGATIVE_VECTOR_PAYLOAD_LENGTH_MISMATCH_V1_SELFTEST_OK
+

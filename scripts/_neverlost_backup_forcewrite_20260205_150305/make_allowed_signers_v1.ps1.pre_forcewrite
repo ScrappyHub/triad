@@ -1,0 +1,14 @@
+param([Parameter(Mandatory=$true)][string]$RepoRoot)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot "_lib_neverlost_v1.ps1")
+
+$out    = NL-WriteAllowedSigners $RepoRoot
+$tbPath = NL-TrustBundlePath $RepoRoot
+$asPath = NL-AllowedSignersPath $RepoRoot
+
+Write-Host "OK: allowed_signers written deterministically" -ForegroundColor Green
+Write-Host ("trust_bundle:    {0}" -f $tbPath) -ForegroundColor Cyan
+Write-Host ("allowed_signers: {0}" -f $asPath) -ForegroundColor Cyan
+Write-Host ("trust_bundle_sha256:    {0}" -f (NL-Sha256HexFile $tbPath)) -ForegroundColor DarkGray
+Write-Host ("allowed_signers_sha256: {0}" -f (NL-Sha256HexFile $asPath)) -ForegroundColor DarkGray

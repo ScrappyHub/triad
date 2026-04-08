@@ -1,0 +1,14 @@
+{
+  "title": "triad.transform.manifest.v1",
+  "type": "object",
+  "required": ["schema","transform_id","transform_type","input_path","output_path","input_sha256","output_sha256"],
+  "properties": {
+    "schema": { "type": "string" },
+    "transform_id": { "type": "string" },
+    "transform_type": { "type": "string" },
+    "input_path": { "type": "string" },
+    "output_path": { "type": "string" },
+    "input_sha256": { "type": "string" },
+    "output_sha256": { "type": "string" }
+  }
+}

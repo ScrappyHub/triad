@@ -1,0 +1,139 @@
+{
+    "schema":  "triad.snapshot_tree.v1",
+    "snapshot_id":  "aec6f098bd743a322241f4446061e0b2195aabf26ab69714c273ebf57ad0a640",
+    "created_utc":  "2026-04-08T17:11:45.3329483Z",
+    "identity":  {
+                     "principal":  "single-tenant/local/authority/devbox-1",
+                     "key_id":  "dev-ed25519-1",
+                     "pubkey":  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment"
+                 },
+    "source":  {
+                   "input_dir_name":  "input",
+                   "files":  5,
+                   "dirs":  3,
+                   "total_bytes":  1572915
+               },
+    "chunking":  {
+                     "block_size":  1048576
+                 },
+    "roots":  {
+                  "semantic_root":  "64673a00dcd59bb99946ebd7084f3bf1e810a7d44f0d404d7c44002d58d7632c",
+                  "block_root":  "45451af7dc2b60c115583ef294a6935ec122df607a6531f43dae3d1ce3af807f",
+                  "transcript_root":  "85b4bfd7c9cd900b66e34554680e07eaae677be52d066cdb5a8f8f9dc3b8441e"
+              },
+    "transcript":  {
+                       "path":  "transcript.ndjson",
+                       "root_path":  "snapshot.transcript_root"
+                   },
+    "entries":  [
+                    {
+                        "type":  "dir",
+                        "path":  "level1"
+                    },
+                    {
+                        "type":  "dir",
+                        "path":  "level1/level2"
+                    },
+                    {
+                        "type":  "dir",
+                        "path":  "level1/level2/level3"
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "level1/alpha.txt",
+                        "length":  6,
+                        "sha256":  "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060",
+                        "roots":  {
+                                      "block_root":  "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  6,
+                                           "sha256":  "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060",
+                                           "path":  "blocks/b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "level1/level2/beta.txt",
+                        "length":  5,
+                        "sha256":  "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad",
+                        "roots":  {
+                                      "block_root":  "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  5,
+                                           "sha256":  "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad",
+                                           "path":  "blocks/f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "level1/level2/level3/gamma.txt",
+                        "length":  6,
+                        "sha256":  "ae9a6306a205417afddd14316cc1d0d5e04a98f1be10865dce643925ee070ce2",
+                        "roots":  {
+                                      "block_root":  "ae9a6306a205417afddd14316cc1d0d5e04a98f1be10865dce643925ee070ce2"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  6,
+                                           "sha256":  "ae9a6306a205417afddd14316cc1d0d5e04a98f1be10865dce643925ee070ce2",
+                                           "path":  "blocks/ae9a6306a205417afddd14316cc1d0d5e04a98f1be10865dce643925ee070ce2.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "payload.bin",
+                        "length":  1572865,
+                        "sha256":  "4db207ba8abe00fd0ecb472e285b81ac7655ce21a44e0a308c0ada745476f683",
+                        "roots":  {
+                                      "block_root":  "d2958e32b41f82f2fa4e3edc0f7636966014550ee059bee6ce4226fe9d3e7e89"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  1048576,
+                                           "sha256":  "631b84027d6b9e52b539c4e8373622d23032dfadc64d60af87339c9037e4f769",
+                                           "path":  "blocks/631b84027d6b9e52b539c4e8373622d23032dfadc64d60af87339c9037e4f769.blk"
+                                       },
+                                       {
+                                           "index":  1,
+                                           "offset":  1048576,
+                                           "size":  524289,
+                                           "sha256":  "ab20e616527c7febcb2f5a674f3f7183b4df20889cb688adfe7c0348532ef82d",
+                                           "path":  "blocks/ab20e616527c7febcb2f5a674f3f7183b4df20889cb688adfe7c0348532ef82d.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "root_note.txt",
+                        "length":  33,
+                        "sha256":  "2b364952b310d718d782bffec2ad9965d011ab38aea3d60eee440f7e30ba5f4b",
+                        "roots":  {
+                                      "block_root":  "2b364952b310d718d782bffec2ad9965d011ab38aea3d60eee440f7e30ba5f4b"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  33,
+                                           "sha256":  "2b364952b310d718d782bffec2ad9965d011ab38aea3d60eee440f7e30ba5f4b",
+                                           "path":  "blocks/2b364952b310d718d782bffec2ad9965d011ab38aea3d60eee440f7e30ba5f4b.blk"
+                                       }
+                                   ]
+                    }
+                ]
+}

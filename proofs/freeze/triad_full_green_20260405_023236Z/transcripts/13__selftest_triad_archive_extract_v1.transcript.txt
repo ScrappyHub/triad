@@ -1,0 +1,4 @@
+ARCHIVE_DIR: C:\dev\triad\scripts\_work\triad_archive_extract_selftest_v1\archive_out
+OUTPUT_DIR: C:\dev\triad\scripts\_work\triad_archive_extract_selftest_v1\extract_out
+TRIAD_ARCHIVE_EXTRACT_V1_SELFTEST_OK
+

@@ -1,0 +1,6 @@
+OK: TRIAD RESTORE VECTOR v1
+snapshot_id: 0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+payload_sha: a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+payload_len: 3670016
+block_count: 4
+TRIAD_RESTORE_VECTOR_V1_OK

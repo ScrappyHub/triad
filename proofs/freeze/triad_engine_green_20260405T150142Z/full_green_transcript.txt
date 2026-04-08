@@ -1,0 +1,38 @@
+PARSE_OK: C:\dev\triad\scripts\triad_restore_prepare_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_restore_verify_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_restore_commit_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_capture_tree_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_archive_pack_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_archive_verify_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_archive_extract_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_transform_apply_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_transform_verify_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_workflow_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_seed_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_vector_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_block_sha_corruption_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_missing_block_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_sha_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_length_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_deeper_tree_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_multi_file_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_repeated_blocks_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_tail_partial_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_extract_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_tampered_blob_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_missing_blob_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_output_not_empty_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_path_traversal_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_unknown_type_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_input_sha_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_output_sha_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_transform_id_mismatch_v1.ps1
+
+=== STDERR ===
+C:\dev\triad\scripts\_RUN_triad_full_green_v1.ps1 : Multiple ambiguous overloads found for "ComputeHash" and the 
+argument count: "1".
+    + CategoryInfo          : NotSpecified: (:) [_RUN_triad_full_green_v1.ps1], MethodException
+    + FullyQualifiedErrorId : MethodCountCouldNotFindBest,_RUN_triad_full_green_v1.ps1
+ 

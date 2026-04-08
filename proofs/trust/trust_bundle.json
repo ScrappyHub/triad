@@ -1,0 +1,15 @@
+{
+  "schema": "neverlost.trust_bundle.v1",
+  "bundle_id": "neverlost-local-dev",
+  "created_utc": "1970-01-01T00:00:00Z",
+  "principals": [
+    {
+      "principal": "single-tenant/local/authority/devbox-1",
+      "key_id": "dev-ed25519-1",
+      "pubkey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment",
+      "namespaces": [
+        "packet/envelope"
+      ]
+    }
+  ]
+}

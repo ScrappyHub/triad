@@ -1,0 +1,3 @@
+NEG_MANIFEST: C:\dev\triad\scripts\_work\triad_archive_negative_path_traversal_v1\archive_out\manifest.triad.json
+TRIAD_ARCHIVE_NEGATIVE_PATH_TRAVERSAL_V1_SELFTEST_OK
+

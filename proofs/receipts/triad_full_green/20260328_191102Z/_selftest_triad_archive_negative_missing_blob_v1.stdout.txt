@@ -1,0 +1,2 @@
+NEG_MISSING_BLOB: C:\dev\triad\scripts\_work\triad_archive_negative_missing_blob_v1\archive_out\blobs\b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060
+TRIAD_ARCHIVE_NEGATIVE_MISSING_BLOB_V1_SELFTEST_OK

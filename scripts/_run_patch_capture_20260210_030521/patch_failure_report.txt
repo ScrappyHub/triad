@@ -1,0 +1,8 @@
+PATCH_FAILED
+patch: C:\dev\triad\scripts\_PATCH_tree_transcript_dual_v1.ps1
+error_type: System.Management.Automation.CommandNotFoundException
+message: The term '$InputDir' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+at C:\dev\triad\scripts\_RUN_patch_capture_error_v1.ps1:27:3
+line_number: 27
+line_text:
+  & $Target -RepoRoot $RepoRoot

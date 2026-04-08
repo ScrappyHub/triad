@@ -1,0 +1,140 @@
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$SnapshotDir,
+  [string]$ManifestPath,
+  [Parameter(Mandatory=$true)][string]$OutFile
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+function Die([string]$m){ throw $m }
+
+function Utf8NoBom { New-Object System.Text.UTF8Encoding($false) }
+function WriteUtf8NoBomLf([string]$Path,[string]$Content){
+  $parent = Split-Path -Parent $Path
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  $lf = $Content.Replace("`r`n","`n").Replace("`r","`n")
+  if(-not $lf.EndsWith("`n")){ $lf += "`n" }
+  [IO.File]::WriteAllText($Path,$lf,(Utf8NoBom))
+}
+
+function Sha256HexFile([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+}
+
+function ReadManifest([string]$ManifestPath){
+  if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $ManifestPath) }
+  $raw = (Get-Content -Raw -LiteralPath $ManifestPath -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $m = $raw | ConvertFrom-Json } catch { Die ("MANIFEST_JSON_PARSE_FAIL: " + $_.Exception.Message) }
+  # Schema dispatch (compat v1): allow snapshot_tree by delegating to tree prepare
+$schemaVal = $null
+$v = Get-Variable -Name schema -Scope 0 -ErrorAction SilentlyContinue
+if ($v) { $schemaVal = [string]$v.Value } else {
+  $vm = Get-Variable -Name m -Scope 0 -ErrorAction SilentlyContinue
+  if ($vm) { try { $schemaVal = [string]$vm.Value.schema } catch { $schemaVal = $null } } else {
+    $vman = Get-Variable -Name manifest -Scope 0 -ErrorAction SilentlyContinue
+    if ($vman) { try { $schemaVal = [string]$vman.Value.schema } catch { $schemaVal = $null } }
+  }
+}
+if ($schemaVal -eq "triad.snapshot_tree.v1") {
+  $tree = Join-Path $PSScriptRoot "triad_restore_tree_prepare_v1.ps1"
+  if (-not (Test-Path -LiteralPath $tree -PathType Leaf)) { Die ("MISSING_TREE_PREP: " + $tree) }
+  & $tree @PSBoundParameters
+  return
+}
+if ($schemaVal -ne "triad.snapshot.v1") { Die ("MANIFEST_SCHEMA_UNEXPECTED: " + $schemaVal) }
+  $m
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+if([string]::IsNullOrWhiteSpace($OutFile)){ Die "OUTFILE_EMPTY" }
+
+# Manifest resolution (compat v3; deterministic)
+$manifestPath = (Join-Path $SnapshotDir "snapshot.manifest.json")
+if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+  $alt = (Join-Path $SnapshotDir "manifest.json")
+  if (Test-Path -LiteralPath $alt -PathType Leaf) {
+    $manifestPath = $alt
+  } else {
+    $hits = @(@(Get-ChildItem -LiteralPath $SnapshotDir -File -Force -ErrorAction Stop | Where-Object { $_.Name -match "manifest" -and $_.Name -match "\.json$" } | Sort-Object Name))
+    if ($hits.Count -eq 1) {
+      $manifestPath = $hits[0].FullName
+    } elseif ($hits.Count -eq 0) {
+      Die ("MISSING_MANIFEST_ANY: " + (Join-Path $SnapshotDir "snapshot.manifest.json"))
+    } else {
+      $names = @(@($hits | ForEach-Object { $_.Name }))
+      Die ("AMBIGUOUS_MANIFEST: " + ($names -join ","))
+    }
+  }
+}
+$man = ReadManifest $manifestPath
+
+$blocks = @(@($man.blocks))
+if($blocks.Count -lt 1){ Die "MANIFEST_NO_BLOCKS" }
+
+$expectedLen = [int64]$man.source.length
+$expectedSha = [string]$man.source.sha256
+$expectedRoot = [string]$man.roots.block_root
+
+# Create deterministic staging paths near OutFile
+$parent = Split-Path -Parent $OutFile
+if($parent -and -not (Test-Path -LiteralPath $parent -PathType Container)){
+  New-Item -ItemType Directory -Force -Path $parent | Out-Null
+}
+$stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd_HHmmss")
+$guid  = [Guid]::NewGuid().ToString("N")
+$tmp   = ($OutFile + ".triad_tmp_v1_" + $stamp + "_" + $guid)
+$plan  = ($OutFile + ".triad_plan_v1_" + $stamp + "_" + $guid + ".json")
+
+# PREPARE: stream blocks into temp file, but also validate block filenames exist
+$ofs = [System.IO.File]::Open($tmp,[System.IO.FileMode]::CreateNew,[System.IO.FileAccess]::Write,[System.IO.FileShare]::None)
+try {
+  foreach($b in $blocks){
+    $sha = [string]$b.sha256
+    $rel = [string]$b.path
+    if([string]::IsNullOrWhiteSpace($sha)){ Die "BLOCK_SHA_EMPTY" }
+    if([string]::IsNullOrWhiteSpace($rel)){ Die ("BLOCK_PATH_EMPTY: " + $sha) }
+    # minimal filename sanity: blocks/<sha>.blk
+    if($rel -notmatch "^blocks\/[0-9a-f]{64}\.blk$"){ Die ("BLOCK_PATH_SHAPE_INVALID: " + $rel) }
+    if($sha -notmatch "^[0-9a-f]{64}$"){ Die ("BLOCK_SHA_SHAPE_INVALID: " + $sha) }
+
+    $blkPath = Join-Path $SnapshotDir ($rel -replace "/","\")
+    if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+    $bytes = [IO.File]::ReadAllBytes($blkPath)
+    $ofs.Write($bytes,0,$bytes.Length)
+  }
+} finally {
+  $ofs.Dispose()
+}
+
+$len = (Get-Item -LiteralPath $tmp).Length
+
+# Write plan (v1). Verify step will re-hash blocks + temp + root invariants.
+$po = [ordered]@{
+  schema         = "triad.restore_plan.v1"
+  created_utc    = (Get-Date).ToUniversalTime().ToString("o")
+  snapshot_dir   = $SnapshotDir
+  manifest_path  = $manifestPath
+  out_file       = $OutFile
+  tmp_file       = $tmp
+  expected_len   = $expectedLen
+  expected_sha256= $expectedSha
+  expected_root  = $expectedRoot
+  tmp_len        = [int64]$len
+}
+$json = ($po | ConvertTo-Json -Depth 4)
+WriteUtf8NoBomLf $plan $json
+
+Write-Host "OK: TRIAD RESTORE PREPARE v1" -ForegroundColor Green
+Write-Host ("plan:       {0}" -f $plan) -ForegroundColor Cyan
+Write-Host ("tmp:        {0}" -f $tmp) -ForegroundColor Cyan
+Write-Host ("tmp_len:    {0}" -f $len) -ForegroundColor DarkGray
+Write-Host ("expected:   len={0} sha256={1}" -f $expectedLen,$expectedSha) -ForegroundColor DarkGray
+
+# return plan path
+$plan

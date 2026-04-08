@@ -1,0 +1,913 @@
+# NeverLost v1 portable library — required in every repo
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+
+function Die([string]$m){ throw $m }
+
+# ---------- UTF-8 determinism ----------
+function Write-Utf8NoBom([string]$Path,[string]$Content){
+  $parent = Split-Path -Parent $Path
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  [IO.File]::WriteAllText($Path,$Content,(New-Object System.Text.UTF8Encoding($false)))
+}
+
+function Write-Utf8NoBomLf([string]$Path,[string]$Content){
+  $lf = $Content.Replace("`r`n","`n")
+  if(-not $lf.EndsWith("`n")){ $lf += "`n" }
+  Write-Utf8NoBom $Path $lf
+}
+
+function Read-Utf8([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ Die ("MISSING: " + $Path) }
+  return (Get-Content -LiteralPath $Path -Raw -Encoding UTF8)
+}
+
+# ---------- hashing ----------
+function Sha256HexBytes([byte[]]$bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha.ComputeHash($bytes)
+    return ([BitConverter]::ToString($hash).Replace("-","").ToLowerInvariant())
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexPath([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ Die ("MISSING: " + $Path) }
+  $h = Get-FileHash -Algorithm SHA256 -LiteralPath $Path
+  return ($h.Hash.ToLowerInvariant())
+}
+
+# ---------- path determinism ----------
+function ResolveRealPath([string]$Path){
+  if([string]::IsNullOrWhiteSpace($Path)){ Die "EMPTY_PATH" }
+  $full = [IO.Path]::GetFullPath($Path)
+  return $full
+}
+
+function RelPathUnix([string]$Root,[string]$FullPath){
+  $r = [IO.Path]::GetFullPath($Root)
+  $f = [IO.Path]::GetFullPath($FullPath)
+  if(-not $f.StartsWith($r, [StringComparison]::OrdinalIgnoreCase)){
+    Die ("PATH_ESCAPES_ROOT: root={0} path={1}" -f $r,$f)
+  }
+  $rel = $f.Substring($r.Length).TrimStart('\','/')
+  return ($rel -replace '\\','/')
+}
+
+# ---------- identity rules ----------
+function AssertPrincipalFormat([string]$Principal){
+  # format: single-tenant/<tenant_authority>/authority/<producer>
+  if([string]::IsNullOrWhiteSpace($Principal)){ Die "PRINCIPAL_EMPTY" }
+  $re = '^single-tenant\/[a-z0-9][a-z0-9._-]*\/authority\/[a-z0-9][a-z0-9._-]*$'
+  if($Principal -notmatch $re){ Die ("BAD_PRINCIPAL_FORMAT: " + $Principal) }
+}
+
+function AssertKeyIdFormat([string]$KeyId){
+  # stable identifier string (NOT a filename, NOT a fingerprint)
+  if([string]::IsNullOrWhiteSpace($KeyId)){ Die "KEY_ID_EMPTY" }
+  $re = '^[a-z0-9][a-z0-9._-]{0,63}$'
+  if($KeyId -notmatch $re){ Die ("BAD_KEY_ID_FORMAT: " + $KeyId) }
+}
+
+# ---------- canonical JSON ----------
+function ConvertTo-OrderedValue($v){
+  if($null -eq $v){ return $null }
+
+  # Treat strings as scalars early (string is IEnumerable[char])
+  if($v -is [string]){ return $v }
+
+  # IDictionary -> return *Hashtable* (NOT OrderedDictionary) for ConvertTo-Json compatibility
+  if($v -is [System.Collections.IDictionary]){
+    $keys = @($v.Keys) | ForEach-Object { [string]# NeverLost v1 portable library — required in every repo
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+
+function Die([string]$m){ throw $m }
+
+# ---------- UTF-8 determinism ----------
+function Write-Utf8NoBom([string]$Path,[string]$Content){
+  $parent = Split-Path -Parent $Path
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  [IO.File]::WriteAllText($Path,$Content,(New-Object System.Text.UTF8Encoding($false)))
+}
+
+function Write-Utf8NoBomLf([string]$Path,[string]$Content){
+  $lf = $Content.Replace("`r`n","`n")
+  if(-not $lf.EndsWith("`n")){ $lf += "`n" }
+  Write-Utf8NoBom $Path $lf
+}
+
+function Read-Utf8([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ Die ("MISSING: " + $Path) }
+  return (Get-Content -LiteralPath $Path -Raw -Encoding UTF8)
+}
+
+# ---------- hashing ----------
+function Sha256HexBytes([byte[]]$bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha.ComputeHash($bytes)
+    return ([BitConverter]::ToString($hash).Replace("-","").ToLowerInvariant())
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexPath([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ Die ("MISSING: " + $Path) }
+  $h = Get-FileHash -Algorithm SHA256 -LiteralPath $Path
+  return ($h.Hash.ToLowerInvariant())
+}
+
+# ---------- path determinism ----------
+function ResolveRealPath([string]$Path){
+  if([string]::IsNullOrWhiteSpace($Path)){ Die "EMPTY_PATH" }
+  $full = [IO.Path]::GetFullPath($Path)
+  return $full
+}
+
+function RelPathUnix([string]$Root,[string]$FullPath){
+  $r = [IO.Path]::GetFullPath($Root)
+  $f = [IO.Path]::GetFullPath($FullPath)
+  if(-not $f.StartsWith($r, [StringComparison]::OrdinalIgnoreCase)){
+    Die ("PATH_ESCAPES_ROOT: root={0} path={1}" -f $r,$f)
+  }
+  $rel = $f.Substring($r.Length).TrimStart('\','/')
+  return ($rel -replace '\\','/')
+}
+
+# ---------- identity rules ----------
+function AssertPrincipalFormat([string]$Principal){
+  # format: single-tenant/<tenant_authority>/authority/<producer>
+  if([string]::IsNullOrWhiteSpace($Principal)){ Die "PRINCIPAL_EMPTY" }
+  $re = '^single-tenant\/[a-z0-9][a-z0-9._-]*\/authority\/[a-z0-9][a-z0-9._-]*$'
+  if($Principal -notmatch $re){ Die ("BAD_PRINCIPAL_FORMAT: " + $Principal) }
+}
+
+function AssertKeyIdFormat([string]$KeyId){
+  # stable identifier string (NOT a filename, NOT a fingerprint)
+  if([string]::IsNullOrWhiteSpace($KeyId)){ Die "KEY_ID_EMPTY" }
+  $re = '^[a-z0-9][a-z0-9._-]{0,63}$'
+  if($KeyId -notmatch $re){ Die ("BAD_KEY_ID_FORMAT: " + $KeyId) }
+}
+
+# ---------- canonical JSON ----------
+function ConvertTo-OrderedValue($v){
+  if($null -eq $v){ return $null }
+
+  # Treat strings as scalars early (string is IEnumerable[char])
+  if($v -is [string]){ return $v }
+
+  # IDictionary (hashtable / ordered)
+  if($v -is [System.Collections.IDictionary]){
+    $keys = @($v.Keys) | ForEach-Object { [string]# NeverLost v1 portable library — required in every repo
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+
+function Die([string]$m){ throw $m }
+
+# ---------- UTF-8 determinism ----------
+function Write-Utf8NoBom([string]$Path,[string]$Content){
+  $parent = Split-Path -Parent $Path
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  [IO.File]::WriteAllText($Path,$Content,(New-Object System.Text.UTF8Encoding($false)))
+}
+
+function Write-Utf8NoBomLf([string]$Path,[string]$Content){
+  $lf = $Content.Replace("`r`n","`n")
+  if(-not $lf.EndsWith("`n")){ $lf += "`n" }
+  Write-Utf8NoBom $Path $lf
+}
+
+function Read-Utf8([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ Die ("MISSING: " + $Path) }
+  return (Get-Content -LiteralPath $Path -Raw -Encoding UTF8)
+}
+
+# ---------- hashing ----------
+function Sha256HexBytes([byte[]]$bytes){
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha.ComputeHash($bytes)
+    return ([BitConverter]::ToString($hash).Replace("-","").ToLowerInvariant())
+  } finally { $sha.Dispose() }
+}
+
+function Sha256HexPath([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path)){ Die ("MISSING: " + $Path) }
+  $h = Get-FileHash -Algorithm SHA256 -LiteralPath $Path
+  return ($h.Hash.ToLowerInvariant())
+}
+
+# ---------- path determinism ----------
+function ResolveRealPath([string]$Path){
+  if([string]::IsNullOrWhiteSpace($Path)){ Die "EMPTY_PATH" }
+  $full = [IO.Path]::GetFullPath($Path)
+  return $full
+}
+
+function RelPathUnix([string]$Root,[string]$FullPath){
+  $r = [IO.Path]::GetFullPath($Root)
+  $f = [IO.Path]::GetFullPath($FullPath)
+  if(-not $f.StartsWith($r, [StringComparison]::OrdinalIgnoreCase)){
+    Die ("PATH_ESCAPES_ROOT: root={0} path={1}" -f $r,$f)
+  }
+  $rel = $f.Substring($r.Length).TrimStart('\','/')
+  return ($rel -replace '\\','/')
+}
+
+# ---------- identity rules ----------
+function AssertPrincipalFormat([string]$Principal){
+  # format: single-tenant/<tenant_authority>/authority/<producer>
+  if([string]::IsNullOrWhiteSpace($Principal)){ Die "PRINCIPAL_EMPTY" }
+  $re = '^single-tenant\/[a-z0-9][a-z0-9._-]*\/authority\/[a-z0-9][a-z0-9._-]*$'
+  if($Principal -notmatch $re){ Die ("BAD_PRINCIPAL_FORMAT: " + $Principal) }
+}
+
+function AssertKeyIdFormat([string]$KeyId){
+  # stable identifier string (NOT a filename, NOT a fingerprint)
+  if([string]::IsNullOrWhiteSpace($KeyId)){ Die "KEY_ID_EMPTY" }
+  $re = '^[a-z0-9][a-z0-9._-]{0,63}$'
+  if($KeyId -notmatch $re){ Die ("BAD_KEY_ID_FORMAT: " + $KeyId) }
+}
+
+# ---------- canonical JSON ----------
+function ConvertTo-OrderedValue($v){
+  if($null -eq $v){ return $null }
+
+  if($v -is [System.Collections.IDictionary]){
+    $keys = @($v.Keys) | Sort-Object
+    $o = [ordered]@{}
+    foreach($k in $keys){
+      $o[$k] = ConvertTo-OrderedValue $v[$k]
+    }
+    return $o
+  }
+
+  if(($v -is [System.Collections.IEnumerable]) -and -not ($v -is [string])){
+    $arr = @()
+    foreach($x in $v){
+      $arr += ,(ConvertTo-OrderedValue $x)
+    }
+    return $arr
+  }
+
+  # PSCustomObject
+  if($v.PSObject -and $v.PSObject.Properties){
+    $props = $v.PSObject.Properties.Name | Sort-Object
+    $o = [ordered]@{}
+    foreach($p in $props){
+      $o[$p] = ConvertTo-OrderedValue ($v.$p)
+    }
+    return $o
+  }
+
+  return $v
+}
+
+function To-CanonJson($obj,[int]$Depth=32){
+  # Stable key ordering + stable whitespace rules via -Compress
+  $ordered = ConvertTo-OrderedValue $obj
+  return ($ordered | ConvertTo-Json -Depth $Depth -Compress)
+}
+
+# ---------- trust material ----------
+function NormalizePubKeyLine([string]$PubKeyLine){
+  if([string]::IsNullOrWhiteSpace($PubKeyLine)){ Die "PUBKEY_EMPTY" }
+  $s = $PubKeyLine.Trim()
+  if($s -notmatch '^ssh-(ed25519|rsa|ecdsa) '){ Die ("PUBKEY_NOT_OPENSSH_LINE: " + $s) }
+  return $s
+}
+
+function MakeAllowedSignersLine([string]$Principal,[string]$PubKeyLine){
+  AssertPrincipalFormat $Principal
+  $pk = NormalizePubKeyLine $PubKeyLine
+  return ("{0} {1}" -f $Principal,$pk)
+}
+
+function WriteAllowedSignersFile([string]$Path,[string[]]$Lines){
+  # Deterministic ordering + LF termination
+  $clean = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) | Sort-Object
+  Write-Utf8NoBomLf $Path (($clean -join "`n") + "`n")
+}
+
+function LoadTrustBundle([string]$TrustBundlePath){
+  $raw = Read-Utf8 $TrustBundlePath
+  $raw = $raw.Replace("`r`n","`n")
+  try { $obj = $raw | ConvertFrom-Json } catch { Die ("TRUST_BUNDLE_JSON_PARSE_FAIL: {0}`n{1}" -f $TrustBundlePath,$_.Exception.Message) }
+
+  if(-not $obj.schema -or [string]$obj.schema -ne "neverlost.trust_bundle.v1"){ Die ("BAD_TRUST_BUNDLE_SCHEMA: " + ([string]$obj.schema)) }
+  if(-not $obj.bundle_id){ Die "TRUST_BUNDLE_MISSING_bundle_id" }
+  if(-not $obj.principals){ Die "TRUST_BUNDLE_MISSING_principals" }
+
+  # validate each principal record
+  foreach($p in $obj.principals){
+    AssertPrincipalFormat ([string]$p.principal)
+    AssertKeyIdFormat ([string]$p.key_id)
+    $null = NormalizePubKeyLine ([string]$p.pubkey)
+    if(-not $p.namespaces -or $p.namespaces.Count -lt 1){ Die ("TRUST_BUNDLE_NAMESPACES_EMPTY for principal=" + [string]$p.principal) }
+  }
+
+  return $obj
+}
+
+function TrustBundleHash([string]$TrustBundlePath){
+  # Hash actual bytes on disk (source of truth)
+  return (Sha256HexPath $TrustBundlePath)
+}
+
+# ---------- receipts (append-only NDJSON) ----------
+function Write-NeverLostReceipt(
+  [string]$ReceiptsPath,
+  $ReceiptObject
+){
+  if([string]::IsNullOrWhiteSpace($ReceiptsPath)){ Die "RECEIPTS_PATH_EMPTY" }
+
+  $line = (To-CanonJson $ReceiptObject) + "`n"
+
+  $parent = Split-Path -Parent $ReceiptsPath
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  if(-not (Test-Path -LiteralPath $ReceiptsPath)){
+    Write-Utf8NoBom $ReceiptsPath ""  # create
+  }
+
+  # append-only
+  [IO.File]::AppendAllText($ReceiptsPath, $line, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# ---------- signing wrappers (OpenSSH) ----------
+function Get-OpenSshKeygen(){
+  $p = Join-Path $env:WINDIR "System32\OpenSSH\ssh-keygen.exe"
+  if(-not (Test-Path -LiteralPath $p)){ Die ("OPENSSH_SSH_KEYGEN_MISSING: " + $p) }
+  return $p
+}
+
+function SshYSignFile(
+  [string]$KeyPath,
+  [string]$Namespace,
+  [string]$FilePath
+){
+  if([string]::IsNullOrWhiteSpace($KeyPath)){ Die "SIGN_KEYPATH_EMPTY" }
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "SIGN_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $KeyPath)){ Die ("SIGN_KEYPATH_MISSING: " + $KeyPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("SIGN_FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sig = [IO.Path]::GetFullPath(($FilePath + ".sig"))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $out = & $ssh -Y sign -f $KeyPath -n $Namespace $name 2>&1
+    if($LASTEXITCODE -ne 0){ Die ("SIGN_FAILED`n" + ($out | Out-String)) }
+  } finally { Pop-Location }
+
+  if(-not (Test-Path -LiteralPath $sig)){ Die ("SIGN_DID_NOT_PRODUCE_SIG: " + $sig) }
+  return $sig
+}
+
+function SshYVerifyFile(
+  [string]$AllowedSignersPath,
+  [string]$SignerPrincipal,
+  [string]$Namespace,
+  [string]$SigPath,
+  [string]$FilePath
+){
+  if(-not (Test-Path -LiteralPath $AllowedSignersPath)){ Die ("ALLOWED_SIGNERS_MISSING: " + $AllowedSignersPath) }
+  AssertPrincipalFormat $SignerPrincipal
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "VERIFY_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $SigPath)){ Die ("SIG_MISSING: " + $SigPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sigName = Split-Path -Leaf ([IO.Path]::GetFullPath($SigPath))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $args = @("-Y","verify","-f",$AllowedSignersPath,"-I",$SignerPrincipal,"-n",$Namespace,"-s",$sigName)
+    $out = & $ssh @args $name 2>&1
+    if($LASTEXITCODE -ne 0){
+      return [ordered]@{ ok=$false; detail=($out | Out-String) }
+    }
+    return [ordered]@{ ok=$true; detail=($out | Out-String) }
+  } finally { Pop-Location }
+}
+ } | Sort-Object
+    $o = [ordered]@{}
+    foreach($k in $keys){
+      $o[$k] = ConvertTo-OrderedValue $v[$k]
+    }
+    return $o
+  }
+
+  # Arrays / lists (IEnumerable but not string)
+  if($v -is [System.Collections.IEnumerable]){
+    $arr = @()
+    foreach($x in $v){
+      $arr += ,(ConvertTo-OrderedValue $x)
+    }
+    return $arr
+  }
+
+  # PSObject / PSCustomObject -> enumerate properties safely
+  if($v -is [psobject]){
+    $names = @()
+    foreach($mi in $v.PSObject.Properties){
+      if($mi -is [System.Management.Automation.PSMemberInfo]){
+        if($mi.MemberType -in @("NoteProperty","Property")){
+          $names += [string]$mi.Name
+        }
+      }
+    }
+    $names = @($names) | Sort-Object
+
+    if($names.Count -gt 0){
+      $o = [ordered]@{}
+      foreach($n in $names){
+        $o[$n] = ConvertTo-OrderedValue ($v.PSObject.Properties[$n].Value)
+      }
+      return $o
+    }
+  }
+
+  return $v
+}
+
+function To-CanonJson($obj,[int]$Depth=32){
+  $ordered = ConvertTo-OrderedValue $obj
+  return ($ordered | ConvertTo-Json -Depth $Depth -Compress)
+}# ---------- trust material ----------
+function NormalizePubKeyLine([string]$PubKeyLine){
+  if([string]::IsNullOrWhiteSpace($PubKeyLine)){ Die "PUBKEY_EMPTY" }
+  $s = $PubKeyLine.Trim()
+  if($s -notmatch '^ssh-(ed25519|rsa|ecdsa) '){ Die ("PUBKEY_NOT_OPENSSH_LINE: " + $s) }
+  return $s
+}
+
+function MakeAllowedSignersLine([string]$Principal,[string]$PubKeyLine){
+  AssertPrincipalFormat $Principal
+  $pk = NormalizePubKeyLine $PubKeyLine
+  return ("{0} {1}" -f $Principal,$pk)
+}
+
+function WriteAllowedSignersFile([string]$Path,[string[]]$Lines){
+  # Deterministic ordering + LF termination
+  $clean = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) | Sort-Object
+  Write-Utf8NoBomLf $Path (($clean -join "`n") + "`n")
+}
+
+function LoadTrustBundle([string]$TrustBundlePath){
+  $raw = Read-Utf8 $TrustBundlePath
+  $raw = $raw.Replace("`r`n","`n")
+  try { $obj = $raw | ConvertFrom-Json } catch { Die ("TRUST_BUNDLE_JSON_PARSE_FAIL: {0}`n{1}" -f $TrustBundlePath,$_.Exception.Message) }
+
+  if(-not $obj.schema -or [string]$obj.schema -ne "neverlost.trust_bundle.v1"){ Die ("BAD_TRUST_BUNDLE_SCHEMA: " + ([string]$obj.schema)) }
+  if(-not $obj.bundle_id){ Die "TRUST_BUNDLE_MISSING_bundle_id" }
+  if(-not $obj.principals){ Die "TRUST_BUNDLE_MISSING_principals" }
+
+  # validate each principal record
+  foreach($p in $obj.principals){
+    AssertPrincipalFormat ([string]$p.principal)
+    AssertKeyIdFormat ([string]$p.key_id)
+    $null = NormalizePubKeyLine ([string]$p.pubkey)
+    if(-not $p.namespaces -or $p.namespaces.Count -lt 1){ Die ("TRUST_BUNDLE_NAMESPACES_EMPTY for principal=" + [string]$p.principal) }
+  }
+
+  return $obj
+}
+
+function TrustBundleHash([string]$TrustBundlePath){
+  # Hash actual bytes on disk (source of truth)
+  return (Sha256HexPath $TrustBundlePath)
+}
+
+# ---------- receipts (append-only NDJSON) ----------
+function Write-NeverLostReceipt(
+  [string]$ReceiptsPath,
+  $ReceiptObject
+){
+  if([string]::IsNullOrWhiteSpace($ReceiptsPath)){ Die "RECEIPTS_PATH_EMPTY" }
+
+  $line = (To-CanonJson $ReceiptObject) + "`n"
+
+  $parent = Split-Path -Parent $ReceiptsPath
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  if(-not (Test-Path -LiteralPath $ReceiptsPath)){
+    Write-Utf8NoBom $ReceiptsPath ""  # create
+  }
+
+  # append-only
+  [IO.File]::AppendAllText($ReceiptsPath, $line, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# ---------- signing wrappers (OpenSSH) ----------
+function Get-OpenSshKeygen(){
+  $p = Join-Path $env:WINDIR "System32\OpenSSH\ssh-keygen.exe"
+  if(-not (Test-Path -LiteralPath $p)){ Die ("OPENSSH_SSH_KEYGEN_MISSING: " + $p) }
+  return $p
+}
+
+function SshYSignFile(
+  [string]$KeyPath,
+  [string]$Namespace,
+  [string]$FilePath
+){
+  if([string]::IsNullOrWhiteSpace($KeyPath)){ Die "SIGN_KEYPATH_EMPTY" }
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "SIGN_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $KeyPath)){ Die ("SIGN_KEYPATH_MISSING: " + $KeyPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("SIGN_FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sig = [IO.Path]::GetFullPath(($FilePath + ".sig"))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $out = & $ssh -Y sign -f $KeyPath -n $Namespace $name 2>&1
+    if($LASTEXITCODE -ne 0){ Die ("SIGN_FAILED`n" + ($out | Out-String)) }
+  } finally { Pop-Location }
+
+  if(-not (Test-Path -LiteralPath $sig)){ Die ("SIGN_DID_NOT_PRODUCE_SIG: " + $sig) }
+  return $sig
+}
+
+function SshYVerifyFile(
+  [string]$AllowedSignersPath,
+  [string]$SignerPrincipal,
+  [string]$Namespace,
+  [string]$SigPath,
+  [string]$FilePath
+){
+  if(-not (Test-Path -LiteralPath $AllowedSignersPath)){ Die ("ALLOWED_SIGNERS_MISSING: " + $AllowedSignersPath) }
+  AssertPrincipalFormat $SignerPrincipal
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "VERIFY_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $SigPath)){ Die ("SIG_MISSING: " + $SigPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sigName = Split-Path -Leaf ([IO.Path]::GetFullPath($SigPath))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $args = @("-Y","verify","-f",$AllowedSignersPath,"-I",$SignerPrincipal,"-n",$Namespace,"-s",$sigName)
+    $out = & $ssh @args $name 2>&1
+    if($LASTEXITCODE -ne 0){
+      return [ordered]@{ ok=$false; detail=($out | Out-String) }
+    }
+    return [ordered]@{ ok=$true; detail=($out | Out-String) }
+  } finally { Pop-Location }
+}
+ } | Sort-Object
+    $h = @{}
+    foreach($k in $keys){
+      $h[$k] = ConvertTo-OrderedValue $v[$k]
+    }
+    return $h
+  }
+
+  # Arrays / lists (IEnumerable but not string)
+  if($v -is [System.Collections.IEnumerable]){
+    $arr = @()
+    foreach($x in $v){
+      $arr += ,(ConvertTo-OrderedValue $x)
+    }
+    return $arr
+  }
+
+  # PSObject / PSCustomObject -> hashtable with sorted names
+  if($v -is [psobject]){
+    $names = @()
+    foreach($mi in $v.PSObject.Properties){
+      if($mi -is [System.Management.Automation.PSMemberInfo]){
+        if($mi.MemberType -in @("NoteProperty","Property")){
+          $names += [string]$mi.Name
+        }
+      }
+    }
+    $names = @($names) | Sort-Object
+
+    if($names.Count -gt 0){
+      $h = @{}
+      foreach($n in $names){
+        $h[$n] = ConvertTo-OrderedValue ($v.PSObject.Properties[$n].Value)
+      }
+      return $h
+    }
+  }
+
+  return $v
+}
+
+function To-CanonJson($obj,[int]$Depth=32){
+  $canon = ConvertTo-OrderedValue $obj
+  return ($canon | ConvertTo-Json -Depth $Depth -Compress)
+}# ---------- trust material ----------
+function NormalizePubKeyLine([string]$PubKeyLine){
+  if([string]::IsNullOrWhiteSpace($PubKeyLine)){ Die "PUBKEY_EMPTY" }
+  $s = $PubKeyLine.Trim()
+  if($s -notmatch '^ssh-(ed25519|rsa|ecdsa) '){ Die ("PUBKEY_NOT_OPENSSH_LINE: " + $s) }
+  return $s
+}
+
+function MakeAllowedSignersLine([string]$Principal,[string]$PubKeyLine){
+  AssertPrincipalFormat $Principal
+  $pk = NormalizePubKeyLine $PubKeyLine
+  return ("{0} {1}" -f $Principal,$pk)
+}
+
+function WriteAllowedSignersFile([string]$Path,[string[]]$Lines){
+  # Deterministic ordering + LF termination
+  $clean = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) | Sort-Object
+  Write-Utf8NoBomLf $Path (($clean -join "`n") + "`n")
+}
+
+function LoadTrustBundle([string]$TrustBundlePath){
+  $raw = Read-Utf8 $TrustBundlePath
+  $raw = $raw.Replace("`r`n","`n")
+  try { $obj = $raw | ConvertFrom-Json } catch { Die ("TRUST_BUNDLE_JSON_PARSE_FAIL: {0}`n{1}" -f $TrustBundlePath,$_.Exception.Message) }
+
+  if(-not $obj.schema -or [string]$obj.schema -ne "neverlost.trust_bundle.v1"){ Die ("BAD_TRUST_BUNDLE_SCHEMA: " + ([string]$obj.schema)) }
+  if(-not $obj.bundle_id){ Die "TRUST_BUNDLE_MISSING_bundle_id" }
+  if(-not $obj.principals){ Die "TRUST_BUNDLE_MISSING_principals" }
+
+  # validate each principal record
+  foreach($p in $obj.principals){
+    AssertPrincipalFormat ([string]$p.principal)
+    AssertKeyIdFormat ([string]$p.key_id)
+    $null = NormalizePubKeyLine ([string]$p.pubkey)
+    if(-not $p.namespaces -or $p.namespaces.Count -lt 1){ Die ("TRUST_BUNDLE_NAMESPACES_EMPTY for principal=" + [string]$p.principal) }
+  }
+
+  return $obj
+}
+
+function TrustBundleHash([string]$TrustBundlePath){
+  # Hash actual bytes on disk (source of truth)
+  return (Sha256HexPath $TrustBundlePath)
+}
+
+# ---------- receipts (append-only NDJSON) ----------
+function Write-NeverLostReceipt(
+  [string]$ReceiptsPath,
+  $ReceiptObject
+){
+  if([string]::IsNullOrWhiteSpace($ReceiptsPath)){ Die "RECEIPTS_PATH_EMPTY" }
+
+  $line = (To-CanonJson $ReceiptObject) + "`n"
+
+  $parent = Split-Path -Parent $ReceiptsPath
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  if(-not (Test-Path -LiteralPath $ReceiptsPath)){
+    Write-Utf8NoBom $ReceiptsPath ""  # create
+  }
+
+  # append-only
+  [IO.File]::AppendAllText($ReceiptsPath, $line, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# ---------- signing wrappers (OpenSSH) ----------
+function Get-OpenSshKeygen(){
+  $p = Join-Path $env:WINDIR "System32\OpenSSH\ssh-keygen.exe"
+  if(-not (Test-Path -LiteralPath $p)){ Die ("OPENSSH_SSH_KEYGEN_MISSING: " + $p) }
+  return $p
+}
+
+function SshYSignFile(
+  [string]$KeyPath,
+  [string]$Namespace,
+  [string]$FilePath
+){
+  if([string]::IsNullOrWhiteSpace($KeyPath)){ Die "SIGN_KEYPATH_EMPTY" }
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "SIGN_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $KeyPath)){ Die ("SIGN_KEYPATH_MISSING: " + $KeyPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("SIGN_FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sig = [IO.Path]::GetFullPath(($FilePath + ".sig"))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $out = & $ssh -Y sign -f $KeyPath -n $Namespace $name 2>&1
+    if($LASTEXITCODE -ne 0){ Die ("SIGN_FAILED`n" + ($out | Out-String)) }
+  } finally { Pop-Location }
+
+  if(-not (Test-Path -LiteralPath $sig)){ Die ("SIGN_DID_NOT_PRODUCE_SIG: " + $sig) }
+  return $sig
+}
+
+function SshYVerifyFile(
+  [string]$AllowedSignersPath,
+  [string]$SignerPrincipal,
+  [string]$Namespace,
+  [string]$SigPath,
+  [string]$FilePath
+){
+  if(-not (Test-Path -LiteralPath $AllowedSignersPath)){ Die ("ALLOWED_SIGNERS_MISSING: " + $AllowedSignersPath) }
+  AssertPrincipalFormat $SignerPrincipal
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "VERIFY_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $SigPath)){ Die ("SIG_MISSING: " + $SigPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sigName = Split-Path -Leaf ([IO.Path]::GetFullPath($SigPath))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $args = @("-Y","verify","-f",$AllowedSignersPath,"-I",$SignerPrincipal,"-n",$Namespace,"-s",$sigName)
+    $out = & $ssh @args $name 2>&1
+    if($LASTEXITCODE -ne 0){
+      return [ordered]@{ ok=$false; detail=($out | Out-String) }
+    }
+    return [ordered]@{ ok=$true; detail=($out | Out-String) }
+  } finally { Pop-Location }
+}
+ } | Sort-Object
+    $o = [ordered]@{}
+    foreach($k in $keys){
+      $o[$k] = ConvertTo-OrderedValue $v[$k]
+    }
+    return $o
+  }
+
+  # Arrays / lists (IEnumerable but not string)
+  if($v -is [System.Collections.IEnumerable]){
+    $arr = @()
+    foreach($x in $v){
+      $arr += ,(ConvertTo-OrderedValue $x)
+    }
+    return $arr
+  }
+
+  # PSObject / PSCustomObject -> enumerate properties safely
+  if($v -is [psobject]){
+    $names = @()
+    foreach($mi in $v.PSObject.Properties){
+      if($mi -is [System.Management.Automation.PSMemberInfo]){
+        if($mi.MemberType -in @("NoteProperty","Property")){
+          $names += [string]$mi.Name
+        }
+      }
+    }
+    $names = @($names) | Sort-Object
+
+    if($names.Count -gt 0){
+      $o = [ordered]@{}
+      foreach($n in $names){
+        $o[$n] = ConvertTo-OrderedValue ($v.PSObject.Properties[$n].Value)
+      }
+      return $o
+    }
+  }
+
+  return $v
+}
+
+function To-CanonJson($obj,[int]$Depth=32){
+  $ordered = ConvertTo-OrderedValue $obj
+  return ($ordered | ConvertTo-Json -Depth $Depth -Compress)
+}# ---------- trust material ----------
+function NormalizePubKeyLine([string]$PubKeyLine){
+  if([string]::IsNullOrWhiteSpace($PubKeyLine)){ Die "PUBKEY_EMPTY" }
+  $s = $PubKeyLine.Trim()
+  if($s -notmatch '^ssh-(ed25519|rsa|ecdsa) '){ Die ("PUBKEY_NOT_OPENSSH_LINE: " + $s) }
+  return $s
+}
+
+function MakeAllowedSignersLine([string]$Principal,[string]$PubKeyLine){
+  AssertPrincipalFormat $Principal
+  $pk = NormalizePubKeyLine $PubKeyLine
+  return ("{0} {1}" -f $Principal,$pk)
+}
+
+function WriteAllowedSignersFile([string]$Path,[string[]]$Lines){
+  # Deterministic ordering + LF termination
+  $clean = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) | Sort-Object
+  Write-Utf8NoBomLf $Path (($clean -join "`n") + "`n")
+}
+
+function LoadTrustBundle([string]$TrustBundlePath){
+  $raw = Read-Utf8 $TrustBundlePath
+  $raw = $raw.Replace("`r`n","`n")
+  try { $obj = $raw | ConvertFrom-Json } catch { Die ("TRUST_BUNDLE_JSON_PARSE_FAIL: {0}`n{1}" -f $TrustBundlePath,$_.Exception.Message) }
+
+  if(-not $obj.schema -or [string]$obj.schema -ne "neverlost.trust_bundle.v1"){ Die ("BAD_TRUST_BUNDLE_SCHEMA: " + ([string]$obj.schema)) }
+  if(-not $obj.bundle_id){ Die "TRUST_BUNDLE_MISSING_bundle_id" }
+  if(-not $obj.principals){ Die "TRUST_BUNDLE_MISSING_principals" }
+
+  # validate each principal record
+  foreach($p in $obj.principals){
+    AssertPrincipalFormat ([string]$p.principal)
+    AssertKeyIdFormat ([string]$p.key_id)
+    $null = NormalizePubKeyLine ([string]$p.pubkey)
+    if(-not $p.namespaces -or $p.namespaces.Count -lt 1){ Die ("TRUST_BUNDLE_NAMESPACES_EMPTY for principal=" + [string]$p.principal) }
+  }
+
+  return $obj
+}
+
+function TrustBundleHash([string]$TrustBundlePath){
+  # Hash actual bytes on disk (source of truth)
+  return (Sha256HexPath $TrustBundlePath)
+}
+
+# ---------- receipts (append-only NDJSON) ----------
+function Write-NeverLostReceipt(
+  [string]$ReceiptsPath,
+  $ReceiptObject
+){
+  if([string]::IsNullOrWhiteSpace($ReceiptsPath)){ Die "RECEIPTS_PATH_EMPTY" }
+
+  $line = (To-CanonJson $ReceiptObject) + "`n"
+
+  $parent = Split-Path -Parent $ReceiptsPath
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  if(-not (Test-Path -LiteralPath $ReceiptsPath)){
+    Write-Utf8NoBom $ReceiptsPath ""  # create
+  }
+
+  # append-only
+  [IO.File]::AppendAllText($ReceiptsPath, $line, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# ---------- signing wrappers (OpenSSH) ----------
+function Get-OpenSshKeygen(){
+  $p = Join-Path $env:WINDIR "System32\OpenSSH\ssh-keygen.exe"
+  if(-not (Test-Path -LiteralPath $p)){ Die ("OPENSSH_SSH_KEYGEN_MISSING: " + $p) }
+  return $p
+}
+
+function SshYSignFile(
+  [string]$KeyPath,
+  [string]$Namespace,
+  [string]$FilePath
+){
+  if([string]::IsNullOrWhiteSpace($KeyPath)){ Die "SIGN_KEYPATH_EMPTY" }
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "SIGN_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $KeyPath)){ Die ("SIGN_KEYPATH_MISSING: " + $KeyPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("SIGN_FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sig = [IO.Path]::GetFullPath(($FilePath + ".sig"))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $out = & $ssh -Y sign -f $KeyPath -n $Namespace $name 2>&1
+    if($LASTEXITCODE -ne 0){ Die ("SIGN_FAILED`n" + ($out | Out-String)) }
+  } finally { Pop-Location }
+
+  if(-not (Test-Path -LiteralPath $sig)){ Die ("SIGN_DID_NOT_PRODUCE_SIG: " + $sig) }
+  return $sig
+}
+
+function SshYVerifyFile(
+  [string]$AllowedSignersPath,
+  [string]$SignerPrincipal,
+  [string]$Namespace,
+  [string]$SigPath,
+  [string]$FilePath
+){
+  if(-not (Test-Path -LiteralPath $AllowedSignersPath)){ Die ("ALLOWED_SIGNERS_MISSING: " + $AllowedSignersPath) }
+  AssertPrincipalFormat $SignerPrincipal
+  if([string]::IsNullOrWhiteSpace($Namespace)){ Die "VERIFY_NAMESPACE_EMPTY" }
+  if(-not (Test-Path -LiteralPath $SigPath)){ Die ("SIG_MISSING: " + $SigPath) }
+  if(-not (Test-Path -LiteralPath $FilePath)){ Die ("FILE_MISSING: " + $FilePath) }
+
+  $ssh = Get-OpenSshKeygen
+  $dir = Split-Path -Parent ([IO.Path]::GetFullPath($FilePath))
+  $name = Split-Path -Leaf ([IO.Path]::GetFullPath($FilePath))
+  $sigName = Split-Path -Leaf ([IO.Path]::GetFullPath($SigPath))
+
+  Push-Location -LiteralPath $dir
+  try {
+    $args = @("-Y","verify","-f",$AllowedSignersPath,"-I",$SignerPrincipal,"-n",$Namespace,"-s",$sigName)
+    $out = & $ssh @args $name 2>&1
+    if($LASTEXITCODE -ne 0){
+      return [ordered]@{ ok=$false; detail=($out | Out-String) }
+    }
+    return [ordered]@{ ok=$true; detail=($out | Out-String) }
+  } finally { Pop-Location }
+}

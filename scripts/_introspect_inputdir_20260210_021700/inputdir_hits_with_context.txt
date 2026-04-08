@@ -1,0 +1,96 @@
+----- LINE 00005 -----
+00003: $ErrorActionPreference = "Stop"
+00004: Set-StrictMode -Version Latest
+00005: `$InputDir = $null
+00006: 
+00007: function Die([string]$m){ throw $m }
+----- LINE 00047 -----
+00045: $null = $capLines.Add("param(")
+00046: $null = $capLines.Add("  [Parameter(Mandatory=$true)][string]$RepoRoot,")
+00047: $null = $capLines.Add("  [Parameter(Mandatory=$true)][string]$InputDir,")
+00048: $null = $capLines.Add("  [Parameter(Mandatory=$true)][string]$OutDir,")
+00049: $null = $capLines.Add("  [int]$BlockSize = 1048576")
+----- LINE 00117 -----
+00115: $null = $capLines.Add("# ---- inputs ----")
+00116: $null = $capLines.Add("if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die (`"MISSING_REPO: `" + $RepoRoot) }")
+00117: $null = $capLines.Add("if(-not (Test-Path -LiteralPath $InputDir -PathType Container)){ Die (`"MISSING_INPUT_DIR: `" + $InputDir) }")
+00118: $null = $capLines.Add("if($BlockSize -lt 4096){ Die (`"BLOCKSIZE_TOO_SMALL: `" + $BlockSize) }")
+00119: $null = $capLines.Add("")
+----- LINE 00178 -----
+00176: $null = $capLines.Add("}")
+00177: $null = $capLines.Add("")
+00178: $null = $capLines.Add("$startData = [ordered]@{ input_dir_name=(Split-Path -Leaf (Resolve-Path -LiteralPath $InputDir).Path); block_size=[int]$BlockSize; principal=[string]$ident.principal; key_id=[string]$ident.key_id }")
+00179: $null = $capLines.Add("Add-EngineTranscript  `"capture.start`" $startData")
+00180: $null = $capLines.Add("Add-WitnessTranscript `"capture.start`" $startData")
+----- LINE 00183 -----
+00181: $null = $capLines.Add("")
+00182: $null = $capLines.Add("# ---- enumerate tree deterministically ----")
+00183: $null = $capLines.Add("$dirs  = Get-ChildItem -LiteralPath $InputDir -Recurse -Force -Directory -ErrorAction Stop")
+00184: $null = $capLines.Add("$files = Get-ChildItem -LiteralPath $InputDir -Recurse -Force -File      -ErrorAction Stop")
+00185: $null = $capLines.Add("$dirRel = New-Object System.Collections.Generic.List[string]")
+----- LINE 00184 -----
+00182: $null = $capLines.Add("# ---- enumerate tree deterministically ----")
+00183: $null = $capLines.Add("$dirs  = Get-ChildItem -LiteralPath $InputDir -Recurse -Force -Directory -ErrorAction Stop")
+00184: $null = $capLines.Add("$files = Get-ChildItem -LiteralPath $InputDir -Recurse -Force -File      -ErrorAction Stop")
+00185: $null = $capLines.Add("$dirRel = New-Object System.Collections.Generic.List[string]")
+00186: $null = $capLines.Add("foreach($d in @($dirs)){ $r = NormalizeRelPath $InputDir $d.FullName; if(-not [string]::IsNullOrWhiteSpace($r)){ [void]$dirRel.Add($r) } }")
+----- LINE 00186 -----
+00184: $null = $capLines.Add("$files = Get-ChildItem -LiteralPath $InputDir -Recurse -Force -File      -ErrorAction Stop")
+00185: $null = $capLines.Add("$dirRel = New-Object System.Collections.Generic.List[string]")
+00186: $null = $capLines.Add("foreach($d in @($dirs)){ $r = NormalizeRelPath $InputDir $d.FullName; if(-not [string]::IsNullOrWhiteSpace($r)){ [void]$dirRel.Add($r) } }")
+00187: $null = $capLines.Add("$dirRelSorted = @($dirRel.ToArray() | Sort-Object)")
+00188: $null = $capLines.Add("$fileRel = New-Object System.Collections.Generic.List[string]")
+----- LINE 00189 -----
+00187: $null = $capLines.Add("$dirRelSorted = @($dirRel.ToArray() | Sort-Object)")
+00188: $null = $capLines.Add("$fileRel = New-Object System.Collections.Generic.List[string]")
+00189: $null = $capLines.Add("foreach($f in @($files)){ $r = NormalizeRelPath $InputDir $f.FullName; if(-not [string]::IsNullOrWhiteSpace($r)){ [void]$fileRel.Add($r) } }")
+00190: $null = $capLines.Add("$fileRelSorted = @($fileRel.ToArray() | Sort-Object)")
+00191: $null = $capLines.Add("")
+----- LINE 00211 -----
+00209: $null = $capLines.Add("# FILE entries")
+00210: $null = $capLines.Add("foreach($rp in $fileRelSorted){")
+00211: $null = $capLines.Add("  $full = Join-Path $InputDir ($rp -replace `"/`",`"\`")")
+00212: $null = $capLines.Add("  if(-not (Test-Path -LiteralPath $full -PathType Leaf)){ Die (`"ENUM_FILE_MISSING: `" + $full) }")
+00213: $null = $capLines.Add("  $fi = Get-Item -LiteralPath $full")
+----- LINE 00284 -----
+00282: $null = $capLines.Add("  created_utc = (Get-Date).ToUniversalTime().ToString(`"o`")")
+00283: $null = $capLines.Add("  identity    = [ordered]@{ principal=[string]$ident.principal; key_id=[string]$ident.key_id; pubkey=[string]$ident.pubkey }")
+00284: $null = $capLines.Add("  source      = [ordered]@{ input_dir_name=(Split-Path -Leaf (Resolve-Path -LiteralPath $InputDir).Path); files=[int]$fileCount; dirs=[int]$dirCount; total_bytes=[int64]$totalBytes }")
+00285: $null = $capLines.Add("  chunking    = [ordered]@{ block_size = [int]$BlockSize }")
+00286: $null = $capLines.Add("  roots       = [ordered]@{")
+----- LINE 00383 -----
+00381: $null = $stLines.Add("  $Work=Join-Path $WorkRoot (`"tree_dualtx_`" + $Tag + `"_`" + $RunId)")
+00382: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path $Work | Out-Null")
+00383: $null = $stLines.Add("  $InputDir=Join-Path $Work `"input_tree`"")
+00384: $null = $stLines.Add("  $SnapDir =Join-Path $Work `"snapshot_tree_v1`"")
+00385: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path $InputDir | Out-Null")
+----- LINE 00385 -----
+00383: $null = $stLines.Add("  $InputDir=Join-Path $Work `"input_tree`"")
+00384: $null = $stLines.Add("  $SnapDir =Join-Path $Work `"snapshot_tree_v1`"")
+00385: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path $InputDir | Out-Null")
+00386: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"a`") | Out-Null")
+00387: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"empty_dir`") | Out-Null")
+----- LINE 00386 -----
+00384: $null = $stLines.Add("  $SnapDir =Join-Path $Work `"snapshot_tree_v1`"")
+00385: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path $InputDir | Out-Null")
+00386: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"a`") | Out-Null")
+00387: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"empty_dir`") | Out-Null")
+00388: $null = $stLines.Add("  $f=Join-Path $InputDir `"a\one.bin`"")
+----- LINE 00387 -----
+00385: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path $InputDir | Out-Null")
+00386: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"a`") | Out-Null")
+00387: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"empty_dir`") | Out-Null")
+00388: $null = $stLines.Add("  $f=Join-Path $InputDir `"a\one.bin`"")
+00389: $null = $stLines.Add("  $size=262144")
+----- LINE 00388 -----
+00386: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"a`") | Out-Null")
+00387: $null = $stLines.Add("  New-Item -ItemType Directory -Force -Path (Join-Path $InputDir `"empty_dir`") | Out-Null")
+00388: $null = $stLines.Add("  $f=Join-Path $InputDir `"a\one.bin`"")
+00389: $null = $stLines.Add("  $size=262144")
+00390: $null = $stLines.Add("  $buf=New-Object byte[] $size")
+----- LINE 00393 -----
+00391: $null = $stLines.Add("  for($i=0;$i -lt $size;$i++){ $buf[$i]=[byte](($i*19+7)%256) }")
+00392: $null = $stLines.Add("  [IO.File]::WriteAllBytes($f,$buf)")
+00393: $null = $stLines.Add("  [pscustomobject]@{ work=$Work; input=$InputDir; snap=$SnapDir }")
+00394: $null = $stLines.Add("}")
+00395: $null = $stLines.Add("")

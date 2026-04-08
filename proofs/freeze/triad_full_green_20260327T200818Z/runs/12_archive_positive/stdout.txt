@@ -1,0 +1,2 @@
+ARCHIVE_DIR: C:\dev\triad\scripts\_work\triad_archive_selftest_v1\archive_out
+TRIAD_ARCHIVE_V1_SELFTEST_OK

@@ -1,0 +1,10 @@
+param([Parameter(Mandatory=$true)][string]$RepoRoot)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot "_lib_neverlost_v1.ps1")
+
+$info = NL-GetDefaultPrincipalAndKey $RepoRoot
+Write-Host "NeverLost Identity (v1)" -ForegroundColor Green
+Write-Host ("principal: {0}" -f $info.principal) -ForegroundColor Cyan
+Write-Host ("key_id:    {0}" -f $info.key_id) -ForegroundColor Cyan
+Write-Host ("pubkey:    {0}" -f $info.pubkey) -ForegroundColor Cyan

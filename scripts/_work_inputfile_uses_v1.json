@@ -1,0 +1,14 @@
+﻿[
+    {
+        "file":  "C:\\dev\\triad\\scripts\\_selftest_triad_restore_workflow_v1.ps1",
+        "line":  51,
+        "text":  "$sid = \u0026 $Capture -RepoRoot $RepoRoot -InputFile $Input -OutDir $SnapDir -BlockSize 1048576",
+        "context":  " | # Capture | $sid = \u0026 $Capture -RepoRoot $RepoRoot -InputFile $Input -OutDir $SnapDir -BlockSize 1048576 |  | # Prepare -\u003e Verify -\u003e Commit"
+    },
+    {
+        "file":  "C:\\dev\\triad\\scripts\\_selftest_triad_roundtrip_v1.ps1",
+        "line":  50,
+        "text":  "$sid = \u0026 $Capture -RepoRoot $RepoRoot -InputFile $Input -OutDir $SnapDir -BlockSize 1048576",
+        "context":  " | # Capture (binds to NeverLost identity through lib) | $sid = \u0026 $Capture -RepoRoot $RepoRoot -InputFile $Input -OutDir $SnapDir -BlockSize 1048576 |  | # Restore + verify"
+    }
+]

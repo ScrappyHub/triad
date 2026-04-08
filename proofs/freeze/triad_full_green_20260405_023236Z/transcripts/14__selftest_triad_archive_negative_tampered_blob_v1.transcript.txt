@@ -1,0 +1,3 @@
+NEG_BLOB: C:\dev\triad\scripts\_work\triad_archive_negative_tampered_blob_v1\archive_out\blobs\a612932c4cdf648f50a829eeda19706917c9c3780908b659a7ee6919a5562fe3
+TRIAD_ARCHIVE_NEGATIVE_TAMPERED_BLOB_V1_SELFTEST_OK
+

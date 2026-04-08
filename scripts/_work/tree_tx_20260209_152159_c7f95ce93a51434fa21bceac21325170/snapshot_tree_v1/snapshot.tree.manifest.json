@@ -1,0 +1,77 @@
+{
+    "schema":  "triad.snapshot_tree.v1",
+    "snapshot_id":  "635c8140eb3989db024997c94df86d2bc3ce8e826780bc4df15dcd3b9636a454",
+    "created_utc":  "2026-02-09T15:21:59.9762189Z",
+    "identity":  {
+                     "principal":  "single-tenant/local/authority/devbox-1",
+                     "key_id":  "dev-ed25519-1",
+                     "pubkey":  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment"
+                 },
+    "source":  {
+                   "input_dir_name":  "input_tree",
+                   "files":  1,
+                   "dirs":  2,
+                   "total_bytes":  262144
+               },
+    "chunking":  {
+                     "block_size":  65536
+                 },
+    "roots":  {
+                  "semantic_root":  "ac5be405e128d5fa1bf0ff4a213ed676ed394dcfe1f10e845c757504b7f7b19e",
+                  "block_root":  "8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6",
+                  "transcript_root":  "74902f12d7637829e6b6ed2eb83d4321bb485b1f50102af122dabe4743a8bec4"
+              },
+    "transcript":  {
+                       "path":  "transcript.ndjson",
+                       "root_path":  "snapshot.transcript_root"
+                   },
+    "entries":  [
+                    {
+                        "type":  "dir",
+                        "path":  "a"
+                    },
+                    {
+                        "type":  "dir",
+                        "path":  "empty_dir"
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "a/one.bin",
+                        "length":  262144,
+                        "sha256":  "5e00c399ccb5e42d82cbca4e8010379b06982e3cd27b41a76856b683c424bf1e",
+                        "roots":  {
+                                      "block_root":  "cbf68e2c6385413d78a16082a126b0ec36b146985a87fe50ff8c5afca299acd3"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  65536,
+                                           "sha256":  "8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6",
+                                           "path":  "blocks/8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6.blk"
+                                       },
+                                       {
+                                           "index":  1,
+                                           "offset":  65536,
+                                           "size":  65536,
+                                           "sha256":  "8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6",
+                                           "path":  "blocks/8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6.blk"
+                                       },
+                                       {
+                                           "index":  2,
+                                           "offset":  131072,
+                                           "size":  65536,
+                                           "sha256":  "8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6",
+                                           "path":  "blocks/8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6.blk"
+                                       },
+                                       {
+                                           "index":  3,
+                                           "offset":  196608,
+                                           "size":  65536,
+                                           "sha256":  "8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6",
+                                           "path":  "blocks/8426fa91dcdcc07d738de0bfc73fc7e849e810b38f3d530a7de440613d7051d6.blk"
+                                       }
+                                   ]
+                    }
+                ]
+}

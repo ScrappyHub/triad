@@ -1,0 +1,2 @@
+MANIFEST: C:\dev\triad\scripts\_work\triad_transform_selftest_v1\output.txt.transform_manifest.json
+TRIAD_TRANSFORM_V1_SELFTEST_OK

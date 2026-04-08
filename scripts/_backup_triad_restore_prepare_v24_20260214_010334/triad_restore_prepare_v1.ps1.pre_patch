@@ -1,0 +1,438 @@
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$SnapshotDir,
+  [string]$ManifestPath,
+  [Parameter(Mandatory=$true)][string]$OutFile
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+# TRIAD_TRAP_V13
+trap {
+  try {
+    $inv = $_.InvocationInfo
+    $ln  = $inv.ScriptLineNumber
+    $txt = $inv.Line
+    Write-Host ("TRIAD_TRAP_V13: ERR at line " + $ln) -ForegroundColor Red
+    if ($txt) { Write-Host ("TRIAD_TRAP_V13: LINE: " + $txt) -ForegroundColor Red }
+    # PATCH_TRAP_PRINT_MESSAGE_V19
+    try {
+      $msg = $null
+      try { $msg = $_.Exception.Message } catch { $msg = $null }
+      if ($null -ne $msg -and ($msg.ToString().Length -gt 0)) {
+        Write-Host ("TRIAD_TRAP_V13: MESSAGE: " + $msg) -ForegroundColor Yellow
+      } else {
+        Write-Host "TRIAD_TRAP_V13: MESSAGE: <null>" -ForegroundColor Yellow
+      }
+      $inner = $null
+      try { $inner = $_.Exception.InnerException } catch { $inner = $null }
+      if ($null -ne $inner) {
+        try { Write-Host ("TRIAD_TRAP_V13: INNER: " + $inner.Message) -ForegroundColor DarkYellow } catch { }
+      }
+    } catch { }
+    # END_PATCH_TRAP_PRINT_MESSAGE_V19
+  } catch { }
+  throw
+}
+
+# --- injected by _PATCH_triad_restore_prepare_treeprep_root_v4.ps1 ---
+if (-not (Get-Variable -Name ScriptsDir -Scope Local -ErrorAction SilentlyContinue)) {
+  $ScriptsDir = $PSScriptRoot
+}
+if (-not (Get-Variable -Name TreePrep -Scope Local -ErrorAction SilentlyContinue)) {
+  $TreePrep = Join-Path $ScriptsDir "triad_restore_tree_prepare_v1.ps1"
+}
+# --- end injected block ---
+
+
+function Die([string]$m){ throw $m }
+
+function Utf8NoBom { New-Object System.Text.UTF8Encoding($false) }
+function WriteUtf8NoBomLf([string]$Path,[string]$Content){
+  $parent = Split-Path -Parent $Path
+  if($parent -and -not (Test-Path -LiteralPath $parent)){
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+  }
+  $lf = $Content.Replace("`r`n","`n").Replace("`r","`n")
+  if(-not $lf.EndsWith("`n")){ $lf += "`n" }
+  [IO.File]::WriteAllText($Path,$lf,(Utf8NoBom))
+}
+
+function Sha256HexFile([string]$Path){
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
+  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+}
+
+function ReadManifest([string]$ManifestPath){
+  if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){ Die ("MISSING_MANIFEST: " + $ManifestPath) }
+  $raw = (Get-Content -Raw -LiteralPath $ManifestPath -Encoding UTF8).Replace("`r`n","`n").Replace("`r","`n")
+  try { $m = $raw | ConvertFrom-Json } catch { Die ("MANIFEST_JSON_PARSE_FAIL: " + $_.Exception.Message) }
+  # Schema dispatch (compat v1): allow snapshot_tree by delegating to tree prepare
+$schemaVal = $null
+$v = Get-Variable -Name schema -Scope 0 -ErrorAction SilentlyContinue
+if ($v) { $schemaVal = [string]$v.Value } else {
+  $vm = Get-Variable -Name m -Scope 0 -ErrorAction SilentlyContinue
+  if ($vm) { try { $schemaVal = [string]$vm.Value.schema } catch { $schemaVal = $null } } else {
+    $vman = Get-Variable -Name manifest -Scope 0 -ErrorAction SilentlyContinue
+    if ($vman) { try { $schemaVal = [string]$vman.Value.schema } catch { $schemaVal = $null } }
+  }
+}
+if ($schemaVal -eq "triad.snapshot_tree.v1") {
+  # --- patched by _PATCH_triad_restore_prepare_plan_discovery_v7.ps1 ---
+  $outParent = Split-Path -Parent $OutFile
+  if ($outParent -and -not (Test-Path -LiteralPath $outParent -PathType Container)) { New-Item -ItemType Directory -Force -Path $outParent | Out-Null }
+  $outLeaf = Split-Path -Leaf $OutFile
+  $null = (& $TreePrep -RepoRoot $RepoRoot -SnapshotDir $SnapshotDir -OutFile $OutFile -ManifestPath $ManifestPath)
+  $pattern = ($outLeaf + ".triad_plan_tree_v1_*.json")
+  $cand = Get-ChildItem -LiteralPath $outParent -File -Filter $pattern -ErrorAction Stop | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+  if ($null -eq $cand) { throw ("MISSING_PLAN_OUTFILE: " + (Join-Path $outParent $pattern)) }
+  $PlanPath = $cand.FullName
+  $planObj = Get-Content -Raw -LiteralPath $PlanPath -Encoding UTF8 | ConvertFrom-Json
+  # planObj normalize early: v12
+  if ($null -eq $planObj) { throw "PLAN_JSON_PARSE_NULL" }
+  if (-not (Get-Member -InputObject $planObj -Name "blocks" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+    $planObj | Add-Member -MemberType NoteProperty -Name "blocks" -Value @() -Force
+  }
+  $planObj.blocks = @(@($planObj.blocks))
+  if (-not (Get-Member -InputObject $planObj -Name "length" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+    [int64]$mx = 0
+    $bs2 = @(@($planObj.blocks))
+    for($k=0;$k -lt $bs2.Count;$k++){
+      $b2 = $bs2[$k]
+      if ($null -eq $b2) { continue }
+      $mOff2 = (Get-Member -InputObject $b2 -Name "offset" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)
+      $mLen2 = (Get-Member -InputObject $b2 -Name "length" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)
+      if ($mOff2 -and $mLen2) {
+        try {
+          [int64]$off2 = $b2.offset
+          [int64]$ln2  = $b2.length
+          [int64]$end2 = $off2 + $ln2
+          if ($end2 -gt $mx) { $mx = $end2 }
+        } catch { }
+      }
+    }
+    $planObj | Add-Member -MemberType NoteProperty -Name "length" -Value $mx -Force
+    Remove-Variable -Name mx -ErrorAction SilentlyContinue
+  }
+  if ($null -eq $planObj) { throw "PLAN_JSON_PARSE_NULL" }
+  if (-not (Get-Member -InputObject $planObj -Name "blocks" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+    $planObj | Add-Member -MemberType NoteProperty -Name "blocks" -Value @() -Force
+  }
+  $planObj.blocks = @(@($planObj.blocks))
+  $planObj | Add-Member -MemberType NoteProperty -Name "plan_path" -Value $PlanPath -Force
+  # length normalize: ensure planObj.length exists (StrictMode-safe)
+  if (-not (Get-Member -InputObject $planObj -Name "length" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+    [int64]$mx = 0
+    $bs2 = @(@($planObj.blocks))
+    for($k=0;$k -lt $bs2.Count;$k++){
+      $b2 = $bs2[$k]
+      if ($null -eq $b2) { continue }
+      $mOff2 = (Get-Member -InputObject $b2 -Name "offset" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)
+      $mLen2 = (Get-Member -InputObject $b2 -Name "length" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)
+      if ($mOff2 -and $mLen2) {
+        try {
+          [int64]$off2 = $b2.offset
+          [int64]$ln2  = $b2.length
+          [int64]$end2 = $off2 + $ln2
+          if ($end2 -gt $mx) { $mx = $end2 }
+        } catch { }
+      }
+    }
+    $planObj | Add-Member -MemberType NoteProperty -Name "length" -Value $mx -Force
+    Remove-Variable -Name mx -ErrorAction SilentlyContinue
+  }
+  return $planObj
+  # --- end patch ---
+  if (-not (Test-Path -LiteralPath $tree -PathType Leaf)) { Die ("MISSING_TREE_PREP: " + $tree) }
+  & $tree @PSBoundParameters
+  return
+}
+if ($schemaVal -ne "triad.snapshot.v1") { Die ("MANIFEST_SCHEMA_UNEXPECTED: " + $schemaVal) }
+  $m
+}
+
+if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
+if(-not (Test-Path -LiteralPath $SnapshotDir -PathType Container)){ Die ("MISSING_SNAPSHOT_DIR: " + $SnapshotDir) }
+if([string]::IsNullOrWhiteSpace($OutFile)){ Die "OUTFILE_EMPTY" }
+
+# Manifest resolution (compat v3; deterministic)
+$manifestPath = (Join-Path $SnapshotDir "snapshot.manifest.json")
+if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+  $alt = (Join-Path $SnapshotDir "manifest.json")
+  if (Test-Path -LiteralPath $alt -PathType Leaf) {
+    $manifestPath = $alt
+  } else {
+    $hits = @(@(Get-ChildItem -LiteralPath $SnapshotDir -File -Force -ErrorAction Stop | Where-Object { $_.Name -match "manifest" -and $_.Name -match "\.json$" } | Sort-Object Name))
+    if ($hits.Count -eq 1) {
+      $manifestPath = $hits[0].FullName
+    } elseif ($hits.Count -eq 0) {
+      Die ("MISSING_MANIFEST_ANY: " + (Join-Path $SnapshotDir "snapshot.manifest.json"))
+    } else {
+      $names = @(@($hits | ForEach-Object { $_.Name }))
+      Die ("AMBIGUOUS_MANIFEST: " + ($names -join ","))
+    }
+  }
+}
+$man = ReadManifest $manifestPath
+
+$blocks = @(@($man.blocks))
+Write-Host "WARN: MANIFEST_NO_BLOCKS (fallback: normalize manifest.blocks to empty; plan blocks will drive restore)" -ForegroundColor Yellow
+$__m = $man
+if (-not (Get-Member -InputObject $__m -Name "blocks" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+  $__m | Add-Member -MemberType NoteProperty -Name "blocks" -Value @() -Force
+} else {
+  $__m.blocks = @()
+}
+$man = $__m
+Remove-Variable -Name __m -ErrorAction SilentlyContinue
+$__m = $man
+if (-not (Get-Member -InputObject $__m -Name "blocks" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+  $__m | Add-Member -MemberType NoteProperty -Name "blocks" -Value @() -Force
+} else {
+  $__m.blocks = @()
+}
+$man = $__m
+Remove-Variable -Name __m -ErrorAction SilentlyContinue
+
+# --- patched by _PATCH_triad_restore_prepare_source_fallback_v9.ps1 ---
+$__o = $man
+if ($null -eq $__o) { throw "SOURCE_GUARD_NULL_OBJECT" }
+if (-not (Get-Member -InputObject $__o -Name "source" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+  $pp = (Get-Variable -Name PlanPath -Scope Local -ErrorAction SilentlyContinue)
+  $planPathVal = $null
+  if ($pp) { $planPathVal = $pp.Value }
+  $__o | Add-Member -MemberType NoteProperty -Name "source" -Value ([pscustomobject]@{
+    snapshot_dir   = $SnapshotDir
+    manifest_path  = $ManifestPath
+    out_file       = $OutFile
+    plan_path      = $planPathVal
+  }) -Force
+  Remove-Variable -Name pp -ErrorAction SilentlyContinue
+  Remove-Variable -Name planPathVal -ErrorAction SilentlyContinue
+}
+$man = $__o
+Remove-Variable -Name __o -ErrorAction SilentlyContinue
+# --- end patch ---
+# PATCH_MAN_SOURCE_LEN_V16
+# Ensure $man.source.length exists (bytes). Fallback: plan file on disk (PlanPath or discovery).
+if ($null -eq $man) { throw "MANIFEST_NULL" }
+if (-not (Get-Member -InputObject $man -Name "source" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+  $src0 = New-Object PSObject
+  $man | Add-Member -MemberType NoteProperty -Name "source" -Value $src0 -Force
+}
+if ($null -eq $man.source) {
+  $src1 = New-Object PSObject
+  $man.source = $src1
+}
+if (-not (Get-Member -InputObject $man.source -Name "length" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)) {
+  # Resolve plan path safely (StrictMode-safe): prefer $PlanPath variable if present; else discover from $OutFile prefix.
+  $__planVar = Get-Variable -Name PlanPath -Scope Local -ErrorAction SilentlyContinue
+  $__planPath = $null
+  if ($null -ne $__planVar) { $__planPath = $__planVar.Value }
+  if ($null -eq $__planPath -or -not (Test-Path -LiteralPath $__planPath -PathType Leaf)) {
+    $outParent = Split-Path -Parent $OutFile
+    $outLeaf = Split-Path -Leaf $OutFile
+    $pattern = ($outLeaf + ".triad_plan_tree_v1_*.json")
+    $cand = Get-ChildItem -LiteralPath $outParent -File -Filter $pattern -ErrorAction Stop | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+    if ($null -eq $cand) { throw ("MAN_SOURCE_LEN_PLAN_DISCOVERY_FAILED: " + (Join-Path $outParent $pattern)) }
+    $__planPath = $cand.FullName
+  }
+  $planX = Get-Content -Raw -LiteralPath $__planPath -Encoding UTF8 | ConvertFrom-Json
+  if ($null -eq $planX) { throw "PLAN_JSON_PARSE_NULL_FOR_LEN" }
+  # v21: plan blocks discovery (StrictMode-safe). Handles PSCustomObject + IDictionary/Hashtable.
+  # Searches roots: planX, planX.expected, planX.expected.expected; then paths: blocks | plan.blocks | data.blocks | payload.blocks
+  $bs = @()
+  $__gotBlocks = $false
+  function __Has([object]$o,[string]$n){
+    if ($null -eq $o) { return $false }
+    if ($o -is [System.Collections.IDictionary]) { return $o.Contains($n) }
+    $p = $o.PSObject.Properties[$n]
+    return ($null -ne $p)
+  }
+  function __Get([object]$o,[string]$n){
+    if ($null -eq $o) { return $null }
+    if ($o -is [System.Collections.IDictionary]) { if ($o.Contains($n)) { return $o[$n] } else { return $null } }
+    $p = $o.PSObject.Properties[$n]
+    if ($null -ne $p) { return $p.Value }
+    return $null
+  }
+  $__roots = New-Object System.Collections.Generic.List[object]
+  [void]$__roots.Add($planX)
+  $__e1 = $null
+  if (__Has $planX "expected") { $__e1 = (__Get $planX "expected") }
+  if ($null -ne $__e1) { [void]$__roots.Add($__e1) }
+  $__e2 = $null
+  if ($null -ne $__e1 -and (__Has $__e1 "expected")) { $__e2 = (__Get $__e1 "expected") }
+  if ($null -ne $__e2) { [void]$__roots.Add($__e2) }
+  for($ri=0; $ri -lt $__roots.Count -and (-not $__gotBlocks); $ri++){
+    $__r = $__roots[$ri]
+    if ($null -eq $__r) { continue }
+    if (-not $__gotBlocks -and (__Has $__r "blocks")) {
+      $bs = @(@(__Get $__r "blocks"))
+      $__gotBlocks = $true
+    }
+    if (-not $__gotBlocks -and (__Has $__r "plan")) {
+      $__p = (__Get $__r "plan")
+      if ($null -ne $__p -and (__Has $__p "blocks")) { $bs = @(@(__Get $__p "blocks")); $__gotBlocks=$true }
+      Remove-Variable -Name __p -ErrorAction SilentlyContinue
+    }
+    if (-not $__gotBlocks -and (__Has $__r "data")) {
+      $__d = (__Get $__r "data")
+      if ($null -ne $__d -and (__Has $__d "blocks")) { $bs = @(@(__Get $__d "blocks")); $__gotBlocks=$true }
+      Remove-Variable -Name __d -ErrorAction SilentlyContinue
+    }
+    if (-not $__gotBlocks -and (__Has $__r "payload")) {
+      $__q = (__Get $__r "payload")
+      if ($null -ne $__q -and (__Has $__q "blocks")) { $bs = @(@(__Get $__q "blocks")); $__gotBlocks=$true }
+      Remove-Variable -Name __q -ErrorAction SilentlyContinue
+    }
+    Remove-Variable -Name __r -ErrorAction SilentlyContinue
+  }
+  if (-not $__gotBlocks) {
+    # v22: no blocks in plan schema; fallback to expected.total_bytes and synthesize a single block.
+    [int64]$__tb = 0
+    try {
+      if ($null -ne $__e1) {
+        $pTB = $__e1.PSObject.Properties["total_bytes"]
+        if ($null -ne $pTB -and $null -ne $pTB.Value) { $__tb = [int64]$pTB.Value }
+      }
+    } catch { $__tb = 0 }
+    if ($__tb -le 0) {
+      $kTop = "<unknown>"; try { $kTop = (@(@($planX | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)) -join ",") } catch { }
+      $kExp = "<null>"; $tExp = "<null>"
+      try { if ($null -ne $__e1) { $tExp = $__e1.GetType().FullName } } catch { }
+      try { if ($null -ne $__e1) { $kExp = (@(@($__e1 | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)) -join ",") } } catch { }
+      throw ("PLAN_NO_BLOCKS_AND_NO_TOTAL_BYTES v22 topKeys=" + $kTop + " expectedType=" + $tExp + " expectedKeys=" + $kExp)
+    }
+    # Synthesize one block so downstream max-end logic works deterministically.
+    $b0 = [pscustomobject]@{ offset = [int64]0; length = [int64]$__tb }
+    $bs = @($b0)
+    $__gotBlocks = $true
+    Remove-Variable -Name b0 -ErrorAction SilentlyContinue
+    Remove-Variable -Name __tb -ErrorAction SilentlyContinue
+  }
+  Remove-Variable -Name __e1 -ErrorAction SilentlyContinue
+  Remove-Variable -Name __e2 -ErrorAction SilentlyContinue
+  Remove-Variable -Name __roots -ErrorAction SilentlyContinue
+  Remove-Item function:\__Has -ErrorAction SilentlyContinue
+  Remove-Item function:\__Get -ErrorAction SilentlyContinue
+  Remove-Variable -Name __gotBlocks -ErrorAction SilentlyContinue
+  # PATCH_PLANX_BLOCKS_GUARD_V23
+  $__mBlocks = (Get-Member -InputObject $planX -Name "blocks" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)
+  if ($__mBlocks) {
+    $bs = @(@($planX.blocks))
+  } else {
+    # Prefer existing $bs if present; else fall back to expected.total_bytes with a single synthetic block.
+    $__bsVar = Get-Variable -Name bs -Scope Local -ErrorAction SilentlyContinue
+    $__ok = $false
+    if ($null -ne $__bsVar -and $null -ne $__bsVar.Value) {
+      try {
+        $tmp = @(@($__bsVar.Value))
+        if ($tmp.Count -gt 0) { $bs = $tmp; $__ok = $true }
+      } catch { }
+    }
+    if (-not $__ok) {
+      [int64]$__tb = 0
+      try {
+        $e = $null; try { $e = $planX.expected } catch { $e = $null }
+        if ($null -ne $e) {
+          $pTB = $e.PSObject.Properties["total_bytes"]
+          if ($null -ne $pTB -and $null -ne $pTB.Value) { $__tb = [int64]$pTB.Value }
+        }
+      } catch { $__tb = 0 }
+      if ($__tb -le 0) { throw "PLAN_BLOCKS_MISSING_AND_NO_TOTAL_BYTES_V23" }
+      $b0 = [pscustomobject]@{ offset = [int64]0; length = [int64]$__tb }
+      $bs = @($b0)
+      Remove-Variable -Name b0 -ErrorAction SilentlyContinue
+      Remove-Variable -Name __tb -ErrorAction SilentlyContinue
+    }
+    Remove-Variable -Name __ok -ErrorAction SilentlyContinue
+    Remove-Variable -Name __bsVar -ErrorAction SilentlyContinue
+  }
+  Remove-Variable -Name __mBlocks -ErrorAction SilentlyContinue
+  [int64]$mx = 0
+  for($k=0;$k -lt $bs.Count;$k++){
+    $b = $bs[$k]
+    if ($null -eq $b) { continue }
+    $mOff = (Get-Member -InputObject $b -Name "offset" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)
+    $mLen = (Get-Member -InputObject $b -Name "length" -MemberType NoteProperty,Property -ErrorAction SilentlyContinue)
+    if ($mOff -and $mLen) {
+      try {
+        [int64]$off = $b.offset
+        [int64]$ln  = $b.length
+        [int64]$end2 = $off + $ln
+        if ($end2 -gt $mx) { $mx = $end2 }
+      } catch { }
+    }
+  }
+  if ($mx -le 0) { throw ("MAN_SOURCE_LENGTH_FALLBACK_FAILED_FROM_PLAN: " + $__planPath) }
+  $man.source | Add-Member -MemberType NoteProperty -Name "length" -Value $mx -Force
+  Remove-Variable -Name mx -ErrorAction SilentlyContinue
+  Remove-Variable -Name planX -ErrorAction SilentlyContinue
+  Remove-Variable -Name bs -ErrorAction SilentlyContinue
+  Remove-Variable -Name __planPath -ErrorAction SilentlyContinue
+  Remove-Variable -Name __planVar -ErrorAction SilentlyContinue
+}
+$expectedLen = [int64]$man.source.length
+Remove-Variable -Name __p -ErrorAction SilentlyContinue
+Remove-Variable -Name __pVar -ErrorAction SilentlyContinue
+$expectedSha = [string]$man.source.sha256
+$expectedRoot = [string]$man.roots.block_root
+
+# Create deterministic staging paths near OutFile
+$parent = Split-Path -Parent $OutFile
+if($parent -and -not (Test-Path -LiteralPath $parent -PathType Container)){
+  New-Item -ItemType Directory -Force -Path $parent | Out-Null
+}
+$stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd_HHmmss")
+$guid  = [Guid]::NewGuid().ToString("N")
+$tmp   = ($OutFile + ".triad_tmp_v1_" + $stamp + "_" + $guid)
+$plan  = ($OutFile + ".triad_plan_v1_" + $stamp + "_" + $guid + ".json")
+
+# PREPARE: stream blocks into temp file, but also validate block filenames exist
+$ofs = [System.IO.File]::Open($tmp,[System.IO.FileMode]::CreateNew,[System.IO.FileAccess]::Write,[System.IO.FileShare]::None)
+try {
+  foreach($b in $blocks){
+    $sha = [string]$b.sha256
+    $rel = [string]$b.path
+    if([string]::IsNullOrWhiteSpace($sha)){ Die "BLOCK_SHA_EMPTY" }
+    if([string]::IsNullOrWhiteSpace($rel)){ Die ("BLOCK_PATH_EMPTY: " + $sha) }
+    # minimal filename sanity: blocks/<sha>.blk
+    if($rel -notmatch "^blocks\/[0-9a-f]{64}\.blk$"){ Die ("BLOCK_PATH_SHAPE_INVALID: " + $rel) }
+    if($sha -notmatch "^[0-9a-f]{64}$"){ Die ("BLOCK_SHA_SHAPE_INVALID: " + $sha) }
+
+    $blkPath = Join-Path $SnapshotDir ($rel -replace "/","\")
+    if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){ Die ("MISSING_BLOCK_FILE: " + $blkPath) }
+    $bytes = [IO.File]::ReadAllBytes($blkPath)
+    $ofs.Write($bytes,0,$bytes.Length)
+  }
+} finally {
+  $ofs.Dispose()
+}
+
+$len = (Get-Item -LiteralPath $tmp).Length
+
+# Write plan (v1). Verify step will re-hash blocks + temp + root invariants.
+$po = [ordered]@{
+  schema         = "triad.restore_plan.v1"
+  created_utc    = (Get-Date).ToUniversalTime().ToString("o")
+  snapshot_dir   = $SnapshotDir
+  manifest_path  = $manifestPath
+  out_file       = $OutFile
+  tmp_file       = $tmp
+  expected_len   = $expectedLen
+  expected_sha256= $expectedSha
+  expected_root  = $expectedRoot
+  tmp_len        = [int64]$len
+}
+$json = ($po | ConvertTo-Json -Depth 4)
+WriteUtf8NoBomLf $plan $json
+
+Write-Host "OK: TRIAD RESTORE PREPARE v1" -ForegroundColor Green
+Write-Host ("plan:       {0}" -f $plan) -ForegroundColor Cyan
+Write-Host ("tmp:        {0}" -f $tmp) -ForegroundColor Cyan
+Write-Host ("tmp_len:    {0}" -f $len) -ForegroundColor DarkGray
+Write-Host ("expected:   len={0} sha256={1}" -f $expectedLen,$expectedSha) -ForegroundColor DarkGray
+
+# return plan path
+$plan

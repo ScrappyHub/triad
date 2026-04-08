@@ -1,0 +1,56 @@
+OK: TRIAD CAPTURE TREE v1
+snapshot_dir:     C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\snapshot_v1
+snapshot_id:      0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+manifest_sha256:  c03c96a4258355e5c0525759af1a4c8c00bbc7ed0eb4f5b0e02900c9c6f7af16
+semantic_root:    ef819a66ac10db8ddd88a37dc7a31a3fb1d230dcc7123df19e42fce3bae2025f
+block_root:       567da45300ee5f0f411da56d315f3850a92b29d5b50236ad12b09c60ace88765
+files/dirs/bytes: 1/2/3670016
+OK: TRIAD RESTORE TREE PREPARE v1
+plan:    C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\restored.bin.triad_plan_tree_v1_20260308_010939_e3f6e4de8b7344829673813acadbae7d.json
+tmp_dir: C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\restored.bin.triad_tmp_tree_v1_20260308_010938_96a59f7ff1c847cbbcee256d5b0ef717
+WARN: MANIFEST_NO_BLOCKS (fallback: normalize manifest.blocks to empty; plan blocks will drive restore)
+WARN: SOURCE_BYTES_NOT_PRESENT_AT_PREPARE (skipping sha256 verify; expected_sha=; outDir=C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da)
+WARN: EXPECTED_ROOT_MISSING_IN_MANIFEST_PLAN_AND_LOCALS (skipping expectedRoot verify at PREPARE; verify/commit must enforce later)
+OK: TRIAD RESTORE PREPARE v1
+plan:       C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\restored.bin.triad_plan_v1_20260308_010939_32848a9016974742a7e62b3c58be6d49.json
+tmp:        C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\restored.bin.triad_tmp_v1_20260308_010939_32848a9016974742a7e62b3c58be6d49
+tmp_len:    0
+expected:   len=3670016 sha256=
+TRACE_BEFORE_VERIFY_V55S: verify=C:\dev\triad\scripts\triad_restore_verify_v1.ps1
+TRACE_BEFORE_VERIFY_CALL_V55S
+WARN: EXPECTED_LEN_NOT_FOUND (skipping expected length verify)
+WARN: EXPECTED_SHA_NOT_FOUND (skipping expected sha verify)
+expected:   len=0 sha256=
+TRACE_PAYLOAD_ENTRY_V63R: path=payload.bin
+TRACE_EXPECTED_FROM_ENTRY_V63R: len=3670016 sha=a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536 root=9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f
+TRACE_BEFORE_GETBLOCKS_V57
+TRACE_AFTER_GETBLOCKS_V57
+TRACE_BLOCKS_COUNT_V57: 4
+TRACE_BEFORE_BLOCK_FOREACH_V57
+TRACE: MerkleRootHex start n=4
+TRACE: MerkleRootHex end ms=25
+TRACE_REBUILD_TMP_FROM_FILEENTRY_BLOCKS_V63R
+TRACE_REBUILD_BLOCK_V63R: index=0 offset=0 size=1048576 sha=ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b
+TRACE_REBUILD_BLOCK_V63R: index=1 offset=1048576 size=1048576 sha=ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b
+TRACE_REBUILD_BLOCK_V63R: index=2 offset=2097152 size=1048576 sha=ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b
+TRACE_REBUILD_BLOCK_V63R: index=3 offset=3145728 size=524288 sha=f28db4dcb00db2447b33538538601081ec1fc575b23e667bfb33ebe740c8df5a
+TRACE_REBUILT_TMP_LEN_V63R: 3670016
+OK: TRIAD RESTORE VERIFY v1
+plan:     C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\restored.bin.triad_plan_v1_20260308_010939_32848a9016974742a7e62b3c58be6d49.json
+tmp_sha:  a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+tmp_len:  3670016
+root_ok:  9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f
+TRACE_AFTER_VERIFY_CALL_V55S
+OK: TRIAD RESTORE COMMIT v1
+out_file: C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\restored.bin
+
+========================================
+TRIAD RESTORE WORKFLOW SELFTEST: PASS
+snapshot_id: 0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+sha256:       a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+plan:         C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da\restored.bin.triad_plan_v1_20260308_010939_32848a9016974742a7e62b3c58be6d49.json
+work_dir:     C:\dev\triad\scripts\_work\restorewf_20260308_010934_f21140cb695b445782f132c1d46407da
+========================================
+
+
+--- STDERR ---

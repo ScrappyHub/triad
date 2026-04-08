@@ -1,0 +1,3 @@
+NEG_OUTPUT_DIR: C:\dev\triad\scripts\_work\triad_archive_negative_output_not_empty_v1\extract_out
+TRIAD_ARCHIVE_NEGATIVE_OUTPUT_NOT_EMPTY_V1_SELFTEST_OK
+

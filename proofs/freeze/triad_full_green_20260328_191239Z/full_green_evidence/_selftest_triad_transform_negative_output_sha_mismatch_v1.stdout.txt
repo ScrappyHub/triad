@@ -1,0 +1,2 @@
+NEG_MANIFEST: C:\dev\triad\scripts\_work\triad_transform_negative_output_sha_mismatch_v1\output.txt.transform_manifest.json
+TRIAD_TRANSFORM_NEGATIVE_OUTPUT_SHA_MISMATCH_V1_SELFTEST_OK

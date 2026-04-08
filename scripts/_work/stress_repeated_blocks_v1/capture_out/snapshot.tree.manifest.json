@@ -1,0 +1,94 @@
+{
+    "schema":  "triad.snapshot_tree.v1",
+    "snapshot_id":  "9065bbae9b4b0811b11ada40092cfa1a4ad8d010d49f6097d2a3cb0ebd913e67",
+    "created_utc":  "2026-04-08T17:11:55.9875222Z",
+    "identity":  {
+                     "principal":  "single-tenant/local/authority/devbox-1",
+                     "key_id":  "dev-ed25519-1",
+                     "pubkey":  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... comment"
+                 },
+    "source":  {
+                   "input_dir_name":  "input",
+                   "files":  2,
+                   "dirs":  0,
+                   "total_bytes":  4718614
+               },
+    "chunking":  {
+                     "block_size":  1048576
+                 },
+    "roots":  {
+                  "semantic_root":  "520e70dcd710e158f73423895872a332fa335be74891830dcf6adf81aef891e3",
+                  "block_root":  "c471d9f819ab09252cc2465bb5867f253e35b09018568b51151b2d006384bb4c",
+                  "transcript_root":  "505c50275dff21e5e22605e60c34ebe9a14eb6ccdcd6c0187e910d8ac001d6c7"
+              },
+    "transcript":  {
+                       "path":  "transcript.ndjson",
+                       "root_path":  "snapshot.transcript_root"
+                   },
+    "entries":  [
+                    {
+                        "type":  "file",
+                        "path":  "notes.txt",
+                        "length":  22,
+                        "sha256":  "cb550a75e6ed7beeca13ab6ce84c469c4db8e0f4a214259bdc76b20029974c3a",
+                        "roots":  {
+                                      "block_root":  "cb550a75e6ed7beeca13ab6ce84c469c4db8e0f4a214259bdc76b20029974c3a"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  22,
+                                           "sha256":  "cb550a75e6ed7beeca13ab6ce84c469c4db8e0f4a214259bdc76b20029974c3a",
+                                           "path":  "blocks/cb550a75e6ed7beeca13ab6ce84c469c4db8e0f4a214259bdc76b20029974c3a.blk"
+                                       }
+                                   ]
+                    },
+                    {
+                        "type":  "file",
+                        "path":  "payload.bin",
+                        "length":  4718592,
+                        "sha256":  "14989a78829ed435c63351e19a2be9e168104d84fee795b44d8a472f0873c461",
+                        "roots":  {
+                                      "block_root":  "8e99e90be4d88d595ad9dc665dd225f2e2be1deb0c72df0480b299c9a14641e9"
+                                  },
+                        "blocks":  [
+                                       {
+                                           "index":  0,
+                                           "offset":  0,
+                                           "size":  1048576,
+                                           "sha256":  "e76e4c02227083fd12207b7bc85287bb9e02a618fed3bd8eab1bc2daeda2fb53",
+                                           "path":  "blocks/e76e4c02227083fd12207b7bc85287bb9e02a618fed3bd8eab1bc2daeda2fb53.blk"
+                                       },
+                                       {
+                                           "index":  1,
+                                           "offset":  1048576,
+                                           "size":  1048576,
+                                           "sha256":  "e76e4c02227083fd12207b7bc85287bb9e02a618fed3bd8eab1bc2daeda2fb53",
+                                           "path":  "blocks/e76e4c02227083fd12207b7bc85287bb9e02a618fed3bd8eab1bc2daeda2fb53.blk"
+                                       },
+                                       {
+                                           "index":  2,
+                                           "offset":  2097152,
+                                           "size":  1048576,
+                                           "sha256":  "e76e4c02227083fd12207b7bc85287bb9e02a618fed3bd8eab1bc2daeda2fb53",
+                                           "path":  "blocks/e76e4c02227083fd12207b7bc85287bb9e02a618fed3bd8eab1bc2daeda2fb53.blk"
+                                       },
+                                       {
+                                           "index":  3,
+                                           "offset":  3145728,
+                                           "size":  1048576,
+                                           "sha256":  "b9f6d7a57034f9b82ca5e273aa0ce507ea51aa2e8dd0d04285ff6bd4b1c93ee8",
+                                           "path":  "blocks/b9f6d7a57034f9b82ca5e273aa0ce507ea51aa2e8dd0d04285ff6bd4b1c93ee8.blk"
+                                       },
+                                       {
+                                           "index":  4,
+                                           "offset":  4194304,
+                                           "size":  524288,
+                                           "sha256":  "848634fdaa703546864f5802f4e0f3ffe3067c5364a31c466826e0b254f4fb23",
+                                           "path":  "blocks/848634fdaa703546864f5802f4e0f3ffe3067c5364a31c466826e0b254f4fb23.blk"
+                                       }
+                                   ]
+                    }
+                ]
+}

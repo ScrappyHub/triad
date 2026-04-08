@@ -1,0 +1,4 @@
+NEG_PLAN: C:\dev\triad\test_vectors\restore\v1\negative\block_sha_corruption_invalid_v1\plans\restored.bin.triad_plan_v1_20260307_224327_bfcc7c852025463788903aa82892e7c4.json
+NEG_MISSING_BLOCK: C:\dev\triad\scripts\_work\restorewf_20260307_224322_6765bbd5b31045eebf6302456aaf4fb1\snapshot_v1\blocks\ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk
+TRIAD_NEGATIVE_VECTOR_MISSING_BLOCK_V1_SELFTEST_OK
+
