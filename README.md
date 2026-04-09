@@ -19,6 +19,10 @@
 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -File .\scripts\_RUN_triad_full_green_v1.ps1 `
   -RepoRoot .
+
+
+---
+
 Expected Result
 
 A successful run will:
