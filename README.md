@@ -1,49 +1,59 @@
-# TRIAD
+- Reproducible proof artifacts
+- Local-first operation (no network required)
+- Independent verification on clean machines
 
-TRIAD is a standalone deterministic instrument for capture, restore, archive, transform, and verification workflows.
-
-TRIAD does not require external archive tools or external services for its core proof lane. It proves itself locally through deterministic selftests, adversarial negatives, stress coverage, and a single full-green runner.
+---
 
 ## Environment
 
 - Windows PowerShell 5.1
-- `Set-StrictMode -Version Latest`
-- UTF-8 no BOM
-- LF line endings
-- write -> parse-gate -> child execution
-- no interactive-state dependency
-- no network dependency for core proof
+- UTF-8 (no BOM), LF line endings
+- StrictMode enabled
+- Non-interactive execution
 
-## One Command
+---
+
+## Run TRIAD
 
 ```powershell
 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -File .\scripts\_RUN_triad_full_green_v1.ps1 `
   -RepoRoot .
-```
+Expected Result
 
-## Expected Output
+A successful run will:
 
-```text
-TRIAD_TIER0_FULL_GREEN
-```
+Execute all verification workflows
+Produce a complete proof bundle under:
+proofs\freeze\
+Emit a success token indicating a verified full-system run
+Proof Artifacts
 
-## Output Artifacts
+Each run produces:
 
-```text
-proofs\freeze\triad_tier0_<timestamp>\
-  full_green_transcript.txt
-  sha256sums.txt
-  triad.freeze.receipt.json
-```
+Execution transcript
+SHA-256 integrity file
+Freeze receipt
+Deterministic output artifacts
 
-## Docs
+These artifacts can be copied and verified independently.
 
-- `docs\TRIAD_OPERATOR_RUNBOOK_V1.md`
-- `docs\TRIAD_PROOF_MAP_V1.md`
-- `docs\TRIAD_EXTERNAL_VERIFICATION_V1.md`
-- `docs\TRIAD_RELEASE_STRUCTURE_V1.md`
+Independent Verification
 
-## Operator Rule
+TRIAD can be validated on a clean machine by:
 
-Do not trust TRIAD output by default. Verify using the produced transcript, hashes, and freeze receipt.
+Cloning the repository
+Running the command above
+Comparing generated proof artifacts
+
+No external services or dependencies are required.
+
+Design Principles
+Determinism first
+Verification over trust
+Local-first execution
+No hidden state
+Reproducible outcomes
+Status
+
+This is the first verified standalone release of TRIAD.
