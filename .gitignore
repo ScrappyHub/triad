@@ -1,0 +1,19 @@
+# node / frontend artifacts
+workbench/node_modules/
+workbench/dist/
+workbench/.vite/
+
+# logs / temp
+*.log
+*.tmp
+*.temp
+
+# editor / OS noise
+.vscode/
+.DS_Store
+Thumbs.db
+
+# local runtime scratch
+scripts/_work/
+
+keys 
