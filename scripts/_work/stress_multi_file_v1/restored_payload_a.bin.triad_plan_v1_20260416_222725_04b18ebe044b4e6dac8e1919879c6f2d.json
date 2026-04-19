@@ -1,0 +1,12 @@
+{
+    "schema":  "triad.restore_plan.v1",
+    "created_utc":  "2026-04-16T22:27:25.9311472Z",
+    "snapshot_dir":  "C:\\dev\\triad\\scripts\\_work\\stress_multi_file_v1\\capture_out",
+    "manifest_path":  "C:\\dev\\triad\\scripts\\_work\\stress_multi_file_v1\\capture_out\\snapshot.tree.manifest.json",
+    "out_file":  "C:\\dev\\triad\\scripts\\_work\\stress_multi_file_v1\\restored_payload_a.bin",
+    "tmp_file":  "C:\\dev\\triad\\scripts\\_work\\stress_multi_file_v1\\restored_payload_a.bin.triad_tmp_v1_20260416_222725_04b18ebe044b4e6dac8e1919879c6f2d",
+    "expected_len":  2621458,
+    "expected_sha256":  "",
+    "expected_root":  "",
+    "tmp_len":  0
+}

@@ -8,21 +8,23 @@
 
 \- FULL\_GREEN runner passes
 
-\- All negative vectors pass
+\- restore positives and negatives pass
 
-\- Stress harness passes
+\- archive positives and negatives pass
 
-\- Freeze bundle generated
+\- transform positives and negatives pass
 
-\- Freeze bundle pinned (canonical name)
+\- freeze bundle generated
+
+\- canonical freeze pinned
 
 \- README present
 
-\- Runbook present
+\- operator runbook present
 
-\- Proof map present
+\- proof map present
 
-\- External verification instructions present
+\- external verification instructions present
 
 
 
@@ -34,21 +36,27 @@ Release is valid only if:
 
 
 
-\- independent machine reproduces FULL\_GREEN
+\- a fresh clone can run the full-green runner
 
-\- freeze bundle hashes match exactly
+\- `TRIAD\_TIER0\_FULL\_GREEN` is emitted
 
-\- no mutation required to verify
+\- freeze bundle artifacts are written
 
-
-
-\## Output
+\- verification requires no mutation
 
 
 
-\- public repo
+\## Canonical Freeze
 
-\- canonical freeze bundle
 
-\- deterministic verification path
+
+\- `proofs\\freeze\\triad\_tier0\_green\_20260409`
+
+
+
+\## Release Tag
+
+
+
+\- `triad-tier0-v1`
 

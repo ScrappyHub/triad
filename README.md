@@ -174,4 +174,8 @@ TRIAD is a system for proving what happened to data.
 
 Not assuming.
 Not trusting.
+<<<<<<< HEAD
 Proving.
+=======
+Proving.
+>>>>>>> 843463f (TRIAD DIR Tier-0 RELEASE GREEN (freeze bundle + negative enforcement + receipts))

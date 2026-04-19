@@ -1,0 +1,215 @@
+TRIAD FULL GREEN RUNNER v1
+repo_root: C:\dev\triad
+run_dir: C:\dev\triad\proofs\freeze\triad_tier0_20260409T004603Z
+
+PARSE_OK: C:\dev\triad\scripts\triad_restore_prepare_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_restore_verify_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_restore_commit_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_workflow_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_vector_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_block_sha_corruption_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_missing_block_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_sha_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_length_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_deeper_tree_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_multi_file_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_repeated_blocks_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_tail_partial_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_archive_pack_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_archive_verify_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_archive_extract_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_extract_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_tampered_blob_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_missing_blob_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_output_not_empty_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_path_traversal_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_transform_apply_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\triad_transform_verify_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_unknown_type_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_input_sha_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_output_sha_mismatch_v1.ps1
+PARSE_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_transform_id_mismatch_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_workflow_v1.ps1
+OK: TRIAD CAPTURE TREE v1
+snapshot_dir:     C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\snapshot_v1
+snapshot_id:      0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+manifest_sha256:  045a6f68891e3e9c056df0be21c116bb8eb212925ff7ea0b9ed56371f37f9315
+semantic_root:    ef819a66ac10db8ddd88a37dc7a31a3fb1d230dcc7123df19e42fce3bae2025f
+block_root:       567da45300ee5f0f411da56d315f3850a92b29d5b50236ad12b09c60ace88765
+files/dirs/bytes: 1/2/3670016
+OK: TRIAD RESTORE TREE PREPARE v1
+plan:    C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\restored.bin.triad_plan_tree_v1_20260409_004610_c3ee9731a74f466ca795226c83744f32.json
+tmp_dir: C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\restored.bin.triad_tmp_tree_v1_20260409_004610_82ba4ef626994b69bb46c394effa629f
+WARN: MANIFEST_NO_BLOCKS (fallback: normalize manifest.blocks to empty; plan blocks will drive restore)
+WARN: SOURCE_BYTES_NOT_PRESENT_AT_PREPARE (skipping sha256 verify; expected_sha=; outDir=C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5)
+WARN: EXPECTED_ROOT_MISSING_IN_MANIFEST_PLAN_AND_LOCALS (skipping expectedRoot verify at PREPARE; verify/commit must enforce later)
+OK: TRIAD RESTORE PREPARE v1
+plan:       C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\restored.bin.triad_plan_v1_20260409_004610_2ee9b2e54e634c8591f586814c4a49b3.json
+tmp:        C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\restored.bin.triad_tmp_v1_20260409_004610_2ee9b2e54e634c8591f586814c4a49b3
+tmp_len:    0
+expected:   len=3670016 sha256=
+OK: TRIAD RESTORE VERIFY v1
+plan:     C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\restored.bin.triad_plan_v1_20260409_004610_2ee9b2e54e634c8591f586814c4a49b3.json
+tmp_sha:  a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+tmp_len:  3670016
+root_ok:  9e4f1dc230da7632b11b03b8bc0d721dcacfdb474de2ae77ebeadeff8324849f
+OK: TRIAD RESTORE COMMIT v1
+out_file: C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\restored.bin
+
+========================================
+TRIAD RESTORE WORKFLOW SELFTEST: PASS
+snapshot_id: 0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+sha256:       a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+plan:         C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5\restored.bin.triad_plan_v1_20260409_004610_2ee9b2e54e634c8591f586814c4a49b3.json
+work_dir:     C:\dev\triad\scripts\_work\restorewf_20260409_004604_a01b65ac8f254386b5b376949b9782a5
+========================================
+
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_workflow_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_vector_v1.ps1
+OK: TRIAD RESTORE VECTOR v1
+snapshot_id: 0e26f315c83ee36d222b26cb4134c50a8fd430b593e6e39bbc31dc1b4cf6fd78
+payload_sha: a351162b9fda82bb8610b8194192b1d6f2dcc5b29a677e55d6cd34ba5ac9b536
+payload_len: 3670016
+block_count: 4
+TRIAD_RESTORE_VECTOR_V1_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_vector_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_negative_block_sha_corruption_v1.ps1
+NEG_PLAN: C:\dev\triad\test_vectors\restore\v1\negative\block_sha_corruption_invalid_v1\plans\restored.bin.triad_plan_v1_20260307_224327_bfcc7c852025463788903aa82892e7c4.json
+NEG_BLOCK: C:\dev\triad\scripts\_work\restorewf_20260307_224322_6765bbd5b31045eebf6302456aaf4fb1\snapshot_v1\blocks\ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk
+TRIAD_NEGATIVE_VECTOR_BLOCK_SHA_CORRUPTION_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_block_sha_corruption_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_negative_missing_block_v1.ps1
+NEG_PLAN: C:\dev\triad\test_vectors\restore\v1\negative\block_sha_corruption_invalid_v1\plans\restored.bin.triad_plan_v1_20260307_224327_bfcc7c852025463788903aa82892e7c4.json
+NEG_MISSING_BLOCK: C:\dev\triad\scripts\_work\restorewf_20260307_224322_6765bbd5b31045eebf6302456aaf4fb1\snapshot_v1\blocks\ea53eb498f9b7dc054aae73924bf25c569604d2c20aa9016f0b8714a1c180c7b.blk
+TRIAD_NEGATIVE_VECTOR_MISSING_BLOCK_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_missing_block_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_sha_mismatch_v1.ps1
+NEG_PLAN: C:\dev\triad\scripts\_work\neg_payload_sha_mismatch\plan_mutated.json
+TRIAD_NEGATIVE_VECTOR_PAYLOAD_SHA_MISMATCH_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_sha_mismatch_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_length_mismatch_v1.ps1
+NEG_PLAN: C:\dev\triad\scripts\_work\neg_payload_length_mismatch\plan_mutated.json
+TRIAD_NEGATIVE_VECTOR_PAYLOAD_LENGTH_MISMATCH_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_negative_payload_length_mismatch_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_stress_deeper_tree_v1.ps1
+TRIAD_RESTORE_STRESS_DEEPER_TREE_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_deeper_tree_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_stress_multi_file_v1.ps1
+TRIAD_RESTORE_STRESS_MULTI_FILE_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_multi_file_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_stress_repeated_blocks_v1.ps1
+TRIAD_RESTORE_STRESS_REPEATED_BLOCKS_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_repeated_blocks_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_restore_stress_tail_partial_v1.ps1
+TRIAD_RESTORE_STRESS_TAIL_PARTIAL_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_restore_stress_tail_partial_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_archive_v1.ps1
+ARCHIVE_DIR: C:\dev\triad\scripts\_work\triad_archive_selftest_v1\archive_out
+TRIAD_ARCHIVE_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_archive_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_archive_extract_v1.ps1
+ARCHIVE_DIR: C:\dev\triad\scripts\_work\triad_archive_extract_selftest_v1\archive_out
+OUTPUT_DIR: C:\dev\triad\scripts\_work\triad_archive_extract_selftest_v1\extract_out
+TRIAD_ARCHIVE_EXTRACT_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_archive_extract_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_archive_negative_tampered_blob_v1.ps1
+NEG_BLOB: C:\dev\triad\scripts\_work\triad_archive_negative_tampered_blob_v1\archive_out\blobs\a612932c4cdf648f50a829eeda19706917c9c3780908b659a7ee6919a5562fe3
+TRIAD_ARCHIVE_NEGATIVE_TAMPERED_BLOB_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_tampered_blob_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_archive_negative_missing_blob_v1.ps1
+NEG_MISSING_BLOB: C:\dev\triad\scripts\_work\triad_archive_negative_missing_blob_v1\archive_out\blobs\b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060
+TRIAD_ARCHIVE_NEGATIVE_MISSING_BLOB_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_missing_blob_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_archive_negative_output_not_empty_v1.ps1
+NEG_OUTPUT_DIR: C:\dev\triad\scripts\_work\triad_archive_negative_output_not_empty_v1\extract_out
+TRIAD_ARCHIVE_NEGATIVE_OUTPUT_NOT_EMPTY_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_output_not_empty_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_archive_negative_path_traversal_v1.ps1
+NEG_MANIFEST: C:\dev\triad\scripts\_work\triad_archive_negative_path_traversal_v1\archive_out\manifest.triad.json
+TRIAD_ARCHIVE_NEGATIVE_PATH_TRAVERSAL_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_archive_negative_path_traversal_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_transform_v1.ps1
+MANIFEST: C:\dev\triad\scripts\_work\triad_transform_selftest_v1\output.txt.transform_manifest.json
+TRIAD_TRANSFORM_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_transform_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_transform_negative_unknown_type_v1.ps1
+NEG_INPUT: C:\dev\triad\scripts\_work\triad_transform_negative_unknown_type_v1\input.txt
+TRIAD_TRANSFORM_NEGATIVE_UNKNOWN_TYPE_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_unknown_type_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_transform_negative_input_sha_mismatch_v1.ps1
+NEG_MANIFEST: C:\dev\triad\scripts\_work\triad_transform_negative_input_sha_mismatch_v1\output.txt.transform_manifest.json
+TRIAD_TRANSFORM_NEGATIVE_INPUT_SHA_MISMATCH_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_input_sha_mismatch_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_transform_negative_output_sha_mismatch_v1.ps1
+NEG_MANIFEST: C:\dev\triad\scripts\_work\triad_transform_negative_output_sha_mismatch_v1\output.txt.transform_manifest.json
+TRIAD_TRANSFORM_NEGATIVE_OUTPUT_SHA_MISMATCH_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_output_sha_mismatch_v1.ps1
+
+RUN: C:\dev\triad\scripts\_selftest_triad_transform_negative_transform_id_mismatch_v1.ps1
+NEG_MANIFEST: C:\dev\triad\scripts\_work\triad_transform_negative_transform_id_mismatch_v1\output.txt.transform_manifest.json
+TRIAD_TRANSFORM_NEGATIVE_TRANSFORM_ID_MISMATCH_V1_SELFTEST_OK
+
+
+RUN_OK: C:\dev\triad\scripts\_selftest_triad_transform_negative_transform_id_mismatch_v1.ps1

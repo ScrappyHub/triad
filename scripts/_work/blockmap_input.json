@@ -1,0 +1,16 @@
+﻿{
+    "manifest_version":  "triad.blockmap.manifest.v1",
+    "input_path":  "C:\\dev\\triad\\scripts\\_work\\triad_transform_selftest_v1\\input.txt",
+    "file_size":  28,
+    "block_size":  1048576,
+    "block_count":  1,
+    "root_hash":  "51f67e810c17a442558bd5c1938495c4d4f835daf5b18aa501e4d202f1ec203f",
+    "blocks":  [
+                   {
+                       "index":  0,
+                       "offset":  0,
+                       "size":  28,
+                       "sha256":  "d0d47b30ae618a2f19733f568b9732c13693ddbddb9e6b5852fa2ac02965c6a5"
+                   }
+               ]
+}

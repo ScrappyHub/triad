@@ -1,314 +1,66 @@
 param(
   [Parameter(Mandatory=$true)][string]$RepoRoot,
-  [Alias("InputFile")]
   [Parameter(Mandatory=$true)][string]$InputDir,
-  [Parameter(Mandatory=$true)][string]$OutDir,
-  [int]$BlockSize = 1048576
+  [Parameter(Mandatory=$true)][string]$OutputManifest
 )
 
-$ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 function Die([string]$m){ throw $m }
 
-function Utf8NoBom { New-Object System.Text.UTF8Encoding($false) }
-function WriteUtf8NoBomLf([string]$Path,[string]$Content){
-  $parent = Split-Path -Parent $Path
-  if($parent -and -not (Test-Path -LiteralPath $parent)){
-    New-Item -ItemType Directory -Force -Path $parent | Out-Null
-  }
-  $lf = $Content.Replace("`r`n","`n").Replace("`r","`n")
-  if(-not $lf.EndsWith("`n")){ $lf += "`n" }
-  [IO.File]::WriteAllText($Path,$lf,(Utf8NoBom))
-}
+if(-not (Test-Path $InputDir)){ Die ("INPUT_DIR_NOT_FOUND: " + $InputDir) }
+if(Test-Path $OutputManifest){ Die ("OUTPUT_ALREADY_EXISTS: " + $OutputManifest) }
 
-function Sha256HexBytes([byte[]]$Bytes){
-  $sha = [System.Security.Cryptography.SHA256]::Create()
-  try {
-    $h = $sha.ComputeHash($Bytes)
-    ($h | ForEach-Object { $_.ToString("x2") }) -join ""
-  } finally { $sha.Dispose() }
-}
+$InputDir = (Resolve-Path $InputDir).Path
 
-function Sha256HexFile([string]$Path){
-  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }
-  (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
-}
-
-function HexToBytes([string]$Hex){
-  if([string]::IsNullOrWhiteSpace($Hex)){ Die "HEX_EMPTY" }
-  if(($Hex.Length % 2) -ne 0){ Die ("HEX_ODD_LEN: " + $Hex.Length) }
-  $len = $Hex.Length / 2
-  $b = New-Object byte[] $len
-  for($i=0; $i -lt $len; $i++){
-    $b[$i] = [Convert]::ToByte($Hex.Substring($i*2,2),16)
-  }
-  $b
-}
-
-function MerkleRootHex([string[]]$HexHashesInOrder){
-  $arr = @(@($HexHashesInOrder))
-  if($arr.Count -lt 1){ Die "MERKLE_EMPTY" }
-
-  $level = New-Object System.Collections.Generic.List[byte[]]
-  foreach($hx in $arr){ [void]$level.Add((HexToBytes $hx)) }
-
-  while($level.Count -gt 1){
-    $next = New-Object System.Collections.Generic.List[byte[]]
-    for($i=0; $i -lt $level.Count; $i += 2){
-      $a = $level[$i]
-      $b = $null
-      if(($i+1) -lt $level.Count){ $b = $level[$i+1] } else { $b = $level[$i] } # duplicate last if odd
-      $cat = New-Object byte[] ($a.Length + $b.Length)
-      [Array]::Copy($a,0,$cat,0,$a.Length)
-      [Array]::Copy($b,0,$cat,$a.Length,$b.Length)
-      $sha = [System.Security.Cryptography.SHA256]::Create()
-      try {
-        $h = $sha.ComputeHash($cat)
-        [void]$next.Add($h)
-      } finally { $sha.Dispose() }
-    }
-    $level = $next
-  }
-
-  ($level[0] | ForEach-Object { $_.ToString("x2") }) -join ""
-}
-
-function NormalizeRelPath([string]$BaseDir, [string]$FullPath){
-  $base = [IO.Path]::GetFullPath($BaseDir)
-  $full = [IO.Path]::GetFullPath($FullPath)
-  if(-not $full.StartsWith($base, [StringComparison]::OrdinalIgnoreCase)){
-    Die ("PATH_OUTSIDE_BASE: base=" + $base + " full=" + $full)
-  }
-  $rel = $full.Substring($base.Length)
-  if($rel.StartsWith("\") -or $rel.StartsWith("/")){ $rel = $rel.Substring(1) }
-  $rel = $rel -replace "\\","/"
-  $rel
-}
-
-function EntryHashV1([string]$Type,[string]$Rel,[int64]$Len,[string]$Sha){
-  # triad.tree.entry.v1|type|path|len|sha
-  $s = ("triad.tree.entry.v1|{0}|{1}|{2}|{3}" -f $Type,$Rel,$Len,$Sha)
-  Sha256HexBytes ([System.Text.Encoding]::UTF8.GetBytes($s))
-}
-
-# ---- inputs ----
-if(-not (Test-Path -LiteralPath $RepoRoot -PathType Container)){ Die ("MISSING_REPO: " + $RepoRoot) }
-if(-not (Test-Path -LiteralPath $InputDir -PathType Container)){ Die ("MISSING_INPUT_DIR: " + $InputDir) }
-if($BlockSize -lt 4096){ Die ("BLOCKSIZE_TOO_SMALL: " + $BlockSize) }
-
-New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
-$BlocksDir = Join-Path $OutDir "blocks"
-New-Item -ItemType Directory -Force -Path $BlocksDir | Out-Null
-
-# ---- Load NeverLost identity (hard-reset then dot-source) ----
-$ScriptsDir = Join-Path $RepoRoot "scripts"
-$LibPath    = Join-Path $ScriptsDir "_lib_neverlost_v1.ps1"
-if(-not (Test-Path -LiteralPath $LibPath -PathType Leaf)){ Die ("LIB_MISSING: " + $LibPath) }
-Remove-Variable -Name NL_LIB_LOADED -Scope Global -ErrorAction SilentlyContinue
-Remove-Item -Path Function:\NL-* -ErrorAction SilentlyContinue
-. $LibPath
-if(-not (Get-Command NL-GetDefaultPrincipalAndKey -ErrorAction SilentlyContinue)){ Die ("NL_LIB_LOAD_FAILED: missing NL-GetDefaultPrincipalAndKey :: " + $LibPath) }
-$ident = NL-GetDefaultPrincipalAndKey $RepoRoot
-
-# ---- enumerate tree deterministically ----
-# Order: directories first (so empty dirs are captured), then files; both by case-insensitive path then case-sensitive tie-break.
-$dirs = Get-ChildItem -LiteralPath $InputDir -Recurse -Force -Directory -ErrorAction Stop
-$files = Get-ChildItem -LiteralPath $InputDir -Recurse -Force -File -ErrorAction Stop
-
-$dirRel = New-Object System.Collections.Generic.List[object]
-foreach($d in @($dirs)){
-  $r = NormalizeRelPath $InputDir $d.FullName
-  [void]$dirRel.Add([pscustomobject]@{ rel=$r; full=$d.FullName })
-}
-$fileRel = New-Object System.Collections.Generic.List[object]
-foreach($f in @($files)){
-  $r = NormalizeRelPath $InputDir $f.FullName
-  [void]$fileRel.Add([pscustomobject]@{ rel=$r; full=$f.FullName })
-}
-
-$cmpIC = [StringComparer]::OrdinalIgnoreCase
-$cmpC  = [StringComparer]::Ordinal
-
-$dirOrdered = @($dirRel.ToArray() | Sort-Object -Property @{
-  Expression = { $_.rel }
-}, @{
-  Expression = { $_.rel }  # tie-breaker (same expression, but Sort-Object is stable enough for our dataset)
-})
-
-# For a deterministic tie-break, we re-sort in-process if needed:
-# (rare; only if rel differs only by case)
-$dirOrdered = @($dirOrdered | Sort-Object -Property @{
-  Expression = { $_.rel.ToLowerInvariant() }
-}, @{
-  Expression = { $_.rel }
-})
-
-$fileOrdered = @($fileRel.ToArray() | Sort-Object -Property @{
-  Expression = { $_.rel.ToLowerInvariant() }
-}, @{
-  Expression = { $_.rel }
-})
-
-# ---- capture files into content-addressed blocks (dedup inside snapshot) ----
 $entries = New-Object System.Collections.Generic.List[object]
-$entryHashes = New-Object System.Collections.Generic.List[string]
 
-$totalBytes = [int64]0
-$fileCount = 0
-$dirCount  = 0
+$files = Get-ChildItem -LiteralPath $InputDir -Recurse -File
 
-# directories (record even if empty)
-foreach($d in @($dirOrdered)){
-  $rel = [string]$d.rel
-  $eh = EntryHashV1 "dir" $rel 0 ""
-  [void]$entryHashes.Add($eh)
-  $o = [ordered]@{
-    type   = "dir"
-    path   = $rel
-  }
-  [void]$entries.Add([pscustomobject]$o)
-  $dirCount++
-}
+foreach($f in $files){
+  $full = $f.FullName
+  $rel = $full.Substring($InputDir.Length).TrimStart('\')
 
-# files
-foreach($f in @($fileOrdered)){
-  $rel = [string]$f.rel
-  $full= [string]$f.full
+  $bytes = [System.IO.File]::ReadAllBytes($full)
+  $sha = [System.BitConverter]::ToString(
+    [System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)
+  ).Replace("-","").ToLowerInvariant()
 
-  $fi = Get-Item -LiteralPath $full
-  $len = [int64]$fi.Length
-  $sha = Sha256HexFile $full
-
-  $totalBytes += $len
-  $fileCount++
-
-  # chunk file into blocks
-  $blockHashes = New-Object System.Collections.Generic.List[string]
-  $blockSizes  = New-Object System.Collections.Generic.List[int]
-  $offsets     = New-Object System.Collections.Generic.List[int64]
-
-  $fs = [System.IO.File]::Open($full,[System.IO.FileMode]::Open,[System.IO.FileAccess]::Read,[System.IO.FileShare]::Read)
-  try {
-    $buf = New-Object byte[] $BlockSize
-    $off = [int64]0
-    while($true){
-      $read = $fs.Read($buf,0,$buf.Length)
-      if($read -le 0){ break }
-
-      $slice = $buf
-      if($read -ne $buf.Length){
-        $slice = New-Object byte[] $read
-        [Array]::Copy($buf,0,$slice,0,$read)
-      }
-
-      $bh = Sha256HexBytes $slice
-      $blkPath = Join-Path $BlocksDir ($bh + ".blk")
-      if(-not (Test-Path -LiteralPath $blkPath -PathType Leaf)){
-        [IO.File]::WriteAllBytes($blkPath,$slice)
-      }
-
-      [void]$blockHashes.Add($bh)
-      [void]$blockSizes.Add($read)
-      [void]$offsets.Add($off)
-      $off += $read
-    }
-    if($off -ne $len){ Die ("CAPTURE_FILE_LEN_MISMATCH: path=" + $rel + " read=" + $off + " expected=" + $len) }
-  } finally {
-    $fs.Dispose()
-  }
-
-  if($blockHashes.Count -lt 1){ Die ("CAPTURE_EMPTY_FILE: " + $rel) }
-  $fileBlockRoot = MerkleRootHex ($blockHashes.ToArray())
-
-  $eh = EntryHashV1 "file" $rel $len $sha
-  [void]$entryHashes.Add($eh)
-
-  $blkArr = New-Object System.Collections.Generic.List[object]
-  for($i=0; $i -lt $blockHashes.Count; $i++){
-    $o2 = [ordered]@{
-      index  = $i
-      offset = [int64]$offsets[$i]
-      size   = [int]$blockSizes[$i]
-      sha256 = [string]$blockHashes[$i]
-      path   = ("blocks/{0}.blk" -f [string]$blockHashes[$i])
-    }
-    [void]$blkArr.Add([pscustomobject]$o2)
-  }
-
-  $o = [ordered]@{
-    type   = "file"
-    path   = $rel
-    length = $len
+  $entries.Add([pscustomobject]@{
+    path = $rel
+    size = $bytes.Length
     sha256 = $sha
-    roots  = [ordered]@{ block_root = $fileBlockRoot }
-    blocks = $blkArr.ToArray()
-  }
-  [void]$entries.Add([pscustomobject]$o)
+  })
 }
 
-if($entries.Count -lt 1){ Die "CAPTURE_TREE_EMPTY" }
+$sorted = $entries | Sort-Object path
 
-# semantic_root: merkle over entry hashes in entry order
-$semanticRoot = MerkleRootHex ($entryHashes.ToArray())
+$idParts = New-Object System.Collections.Generic.List[string]
+[void]$idParts.Add("triad.capture.manifest.v1")
+[void]$idParts.Add([string]$sorted.Count)
 
-# block_root: merkle over UNIQUE block hashes in sorted lexical order
-$blkSet = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
-$blkList = New-Object System.Collections.Generic.List[string]
-$blkFiles = Get-ChildItem -LiteralPath $BlocksDir -File -Force -ErrorAction Stop
-foreach($bf in @($blkFiles)){
-  $name = [IO.Path]::GetFileNameWithoutExtension($bf.Name)
-  if($name -match '^[0-9a-f]{64}$'){
-    if($blkSet.Add($name)){
-      [void]$blkList.Add($name.ToLowerInvariant())
-    }
-  }
-}
-$blkSorted = @($blkList.ToArray() | Sort-Object)
-if($blkSorted.Count -lt 1){ Die "CAPTURE_NO_BLOCKS_WRITTEN" }
-$blockRoot = MerkleRootHex $blkSorted
-
-# SnapshotId (tree v1):
-# sha256("triad.snapshot_tree.v1|block_size|files|dirs|total_bytes|semantic_root|block_root")
-$sidStr = ("triad.snapshot_tree.v1|{0}|{1}|{2}|{3}|{4}|{5}" -f $BlockSize,$fileCount,$dirCount,$totalBytes,$semanticRoot,$blockRoot)
-$sid    = Sha256HexBytes ([System.Text.Encoding]::UTF8.GetBytes($sidStr))
-
-$manifestPath = Join-Path $OutDir "snapshot.tree.manifest.json"
-
-$man = [ordered]@{
-  schema      = "triad.snapshot_tree.v1"
-  snapshot_id = $sid
-  created_utc = (Get-Date).ToUniversalTime().ToString("o")
-  identity    = [ordered]@{
-    principal = [string]$ident.principal
-    key_id    = [string]$ident.key_id
-    pubkey    = [string]$ident.pubkey
-  }
-  source = [ordered]@{
-    input_dir_name = (Split-Path -Leaf (Resolve-Path -LiteralPath $InputDir))
-    files          = [int]$fileCount
-    dirs           = [int]$dirCount
-    total_bytes    = [int64]$totalBytes
-  }
-  chunking = [ordered]@{ block_size = [int]$BlockSize }
-  roots    = [ordered]@{
-    semantic_root = [string]$semanticRoot
-    block_root    = [string]$blockRoot
-  }
-  entries = $entries.ToArray()
+foreach($e in $sorted){
+  [void]$idParts.Add(($e.path + "|" + $e.sha256 + "|" + $e.size))
 }
 
-$json = ($man | ConvertTo-Json -Depth 10)
-WriteUtf8NoBomLf $manifestPath $json
+$joined = ($idParts.ToArray() -join "`n")
 
-$manifestSha = Sha256HexFile $manifestPath
+$root = [System.BitConverter]::ToString(
+  [System.Security.Cryptography.SHA256]::Create().ComputeHash(
+    [System.Text.Encoding]::UTF8.GetBytes($joined)
+  )
+).Replace("-","").ToLowerInvariant()
 
-Write-Host "OK: TRIAD CAPTURE TREE v1" -ForegroundColor Green
-Write-Host ("snapshot_dir:     {0}" -f $OutDir) -ForegroundColor Cyan
-Write-Host ("snapshot_id:      {0}" -f $sid) -ForegroundColor Cyan
-Write-Host ("manifest_sha256:  {0}" -f $manifestSha) -ForegroundColor DarkGray
-Write-Host ("semantic_root:    {0}" -f $semanticRoot) -ForegroundColor DarkGray
-Write-Host ("block_root:       {0}" -f $blockRoot) -ForegroundColor DarkGray
-Write-Host ("files/dirs/bytes: {0}/{1}/{2}" -f $fileCount,$dirCount,$totalBytes) -ForegroundColor DarkGray
+$manifest = [pscustomobject]@{
+  manifest_version = "triad.capture.manifest.v1"
+  root_hash = $root
+  entry_count = $sorted.Count
+  entries = $sorted
+}
 
-$sid
+$manifest | ConvertTo-Json -Depth 6 | Out-File -Encoding utf8 $OutputManifest
+
+Write-Host ("ROOT_HASH: " + $root)
+Write-Host ("ENTRY_COUNT: " + $sorted.Count)
+Write-Host "TRIAD_CAPTURE_V1_OK"

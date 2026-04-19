@@ -1,0 +1,14 @@
+{
+    "schema":  "triad.restore_tree_plan.v1",
+    "snapshot_dir":  "C:\\dev\\triad\\scripts\\_work\\stress_deeper_tree_v1\\capture_out",
+    "manifest_path":  "C:\\dev\\triad\\scripts\\_work\\stress_deeper_tree_v1\\capture_out\\snapshot.tree.manifest.json",
+    "out_dir":  "C:\\dev\\triad\\scripts\\_work\\stress_deeper_tree_v1\\restored.bin",
+    "tmp_dir":  "C:\\dev\\triad\\scripts\\_work\\stress_deeper_tree_v1\\restored.bin.triad_tmp_tree_v1_20260416_222721_b8dad5105a7c4aef9e9998295d25cc5c",
+    "expected":  {
+                     "semantic_root":  "64673a00dcd59bb99946ebd7084f3bf1e810a7d44f0d404d7c44002d58d7632c",
+                     "block_root":  "45451af7dc2b60c115583ef294a6935ec122df607a6531f43dae3d1ce3af807f",
+                     "files":  5,
+                     "dirs":  3,
+                     "total_bytes":  1572915
+                 }
+}

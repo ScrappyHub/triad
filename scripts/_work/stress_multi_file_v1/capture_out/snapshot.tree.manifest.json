@@ -1,7 +1,7 @@
 {
     "schema":  "triad.snapshot_tree.v1",
     "snapshot_id":  "471c556e2804ad1a7ed2453de7ea22982cdc0761f979b08948e645da3eb4cd70",
-    "created_utc":  "2026-04-08T17:11:50.6656379Z",
+    "created_utc":  "2026-04-16T22:27:25.7535212Z",
     "identity":  {
                      "principal":  "single-tenant/local/authority/devbox-1",
                      "key_id":  "dev-ed25519-1",
@@ -19,7 +19,7 @@
     "roots":  {
                   "semantic_root":  "39685be0dc93668eabafea0924ba98bc08f3cbdbb6866e3e79202e280e8f8959",
                   "block_root":  "c6317d0121f580afae5fc11b57ecca8d22b5bff250876c5ea902d5312997952c",
-                  "transcript_root":  "f83a7bcfa88f474e3881fce239bd03ba1cba09f28b227e84376a9df23ae1c2dc"
+                  "transcript_root":  "6955f7f12083efc9200ca2391dcbb8197c66f72353a3e899e3fc64127c0e6948"
               },
     "transcript":  {
                        "path":  "transcript.ndjson",

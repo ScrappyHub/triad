@@ -1,0 +1,66 @@
+﻿{
+    "manifest_version":  "triad.blockmap.dir.manifest.v1",
+    "input_dir":  "C:\\dev\\triad\\scripts\\_work\\triad_archive_selftest_v1\\input",
+    "block_size":  1048576,
+    "file_count":  3,
+    "unique_block_count":  3,
+    "root_hash":  "1492a6f8af30847b301da33904c5c5cabaf62a1d13c0f1a3e2b4700e5531d63f",
+    "block_store":  [
+                        {
+                            "sha256":  "a612932c4cdf648f50a829eeda19706917c9c3780908b659a7ee6919a5562fe3",
+                            "size":  1024,
+                            "ref_count":  1
+                        },
+                        {
+                            "sha256":  "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060",
+                            "size":  6,
+                            "ref_count":  1
+                        },
+                        {
+                            "sha256":  "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad",
+                            "size":  5,
+                            "ref_count":  1
+                        }
+                    ],
+    "files":  [
+                  {
+                      "path":  "a.txt",
+                      "size":  6,
+                      "block_count":  1,
+                      "blocks":  [
+                                     {
+                                         "index":  0,
+                                         "offset":  0,
+                                         "size":  6,
+                                         "sha256":  "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060"
+                                     }
+                                 ]
+                  },
+                  {
+                      "path":  "nested\\b.txt",
+                      "size":  5,
+                      "block_count":  1,
+                      "blocks":  [
+                                     {
+                                         "index":  0,
+                                         "offset":  0,
+                                         "size":  5,
+                                         "sha256":  "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad"
+                                     }
+                                 ]
+                  },
+                  {
+                      "path":  "payload.bin",
+                      "size":  1024,
+                      "block_count":  1,
+                      "blocks":  [
+                                     {
+                                         "index":  0,
+                                         "offset":  0,
+                                         "size":  1024,
+                                         "sha256":  "a612932c4cdf648f50a829eeda19706917c9c3780908b659a7ee6919a5562fe3"
+                                     }
+                                 ]
+                  }
+              ]
+}
