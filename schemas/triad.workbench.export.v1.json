@@ -1,0 +1,15 @@
+{
+  "title": "triad.workbench.export.v1",
+  "type": "object",
+  "required": ["schema","product","summary","canonical_bundle","bundles","engines","actions","commands"],
+  "properties": {
+    "schema": { "type": "string" },
+    "product": { "type": "object" },
+    "summary": { "type": "object" },
+    "canonical_bundle": { "type": "object" },
+    "bundles": { "type": "array" },
+    "engines": { "type": "array" },
+    "actions": { "type": "array" },
+    "commands": { "type": "array" }
+  }
+}

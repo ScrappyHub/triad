@@ -1,0 +1,22 @@
+﻿{
+    "manifest_version":  "triad.capture.manifest.v1",
+    "root_hash":  "2fc92e1c107bf6cc8feb034230cebe535e31ea7960da2f1f051b95fa94fceaee",
+    "entry_count":  3,
+    "entries":  [
+                    {
+                        "path":  "a.txt",
+                        "size":  6,
+                        "sha256":  "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060"
+                    },
+                    {
+                        "path":  "nested\\b.txt",
+                        "size":  5,
+                        "sha256":  "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad"
+                    },
+                    {
+                        "path":  "payload.bin",
+                        "size":  1024,
+                        "sha256":  "a612932c4cdf648f50a829eeda19706917c9c3780908b659a7ee6919a5562fe3"
+                    }
+                ]
+}

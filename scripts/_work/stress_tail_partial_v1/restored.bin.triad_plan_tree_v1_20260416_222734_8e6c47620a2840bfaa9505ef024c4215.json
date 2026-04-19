@@ -1,0 +1,14 @@
+{
+    "schema":  "triad.restore_tree_plan.v1",
+    "snapshot_dir":  "C:\\dev\\triad\\scripts\\_work\\stress_tail_partial_v1\\capture_out",
+    "manifest_path":  "C:\\dev\\triad\\scripts\\_work\\stress_tail_partial_v1\\capture_out\\snapshot.tree.manifest.json",
+    "out_dir":  "C:\\dev\\triad\\scripts\\_work\\stress_tail_partial_v1\\restored.bin",
+    "tmp_dir":  "C:\\dev\\triad\\scripts\\_work\\stress_tail_partial_v1\\restored.bin.triad_tmp_tree_v1_20260416_222734_330f55a86ca5488b996dda50a2cbba3d",
+    "expected":  {
+                     "semantic_root":  "9a50ef6c857771c02628dae92f82ee9e59e33404dd855f39efc4ebab62daf8ae",
+                     "block_root":  "b654927011cbc23e9c94a8baaf52ade203071c097e20a50bd525f3f7e0b3d3cd",
+                     "files":  2,
+                     "dirs":  0,
+                     "total_bytes":  2109517
+                 }
+}
